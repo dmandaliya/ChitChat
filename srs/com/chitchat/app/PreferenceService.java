@@ -1,3 +1,5 @@
+package com.chitchat.app;
+
 public class PreferenceService {
 
     // ----- Display / Theme -----

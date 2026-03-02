@@ -1,3 +1,5 @@
+package com.chitchat.app;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -92,8 +94,9 @@ public class User {
     }
 
     public void printList(User u) {
+        System.out.print("Friends: ");
         for (User i: u.getFriendList()) {
-            System.out.println(i.getFname() + " " + i.getLname());
+            System.out.print(i.getFname() + " " + i.getLname() + ", ");
         }
     }
 }

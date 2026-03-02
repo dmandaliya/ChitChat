@@ -1,3 +1,5 @@
+package com.chitchat.app;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 

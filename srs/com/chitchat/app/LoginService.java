@@ -1,4 +1,5 @@
-import java.util.ArrayList;
+package com.chitchat.app;
+
 import java.util.Scanner;
 import java.util.List;
 
@@ -41,7 +42,7 @@ public class LoginService {
         if ((currentUser == empty) && (!user.getNewAccount())) display();
         else if ((currentUser == empty) && (user.getNewAccount())) initialize();
         else {
-            System.out.println("User is currently logged in.");
+            System.out.println("com.chitchat.app.User is currently logged in.");
             return;
         }
         System.out.println("Logged in: " + user.getUsername() + "\n");

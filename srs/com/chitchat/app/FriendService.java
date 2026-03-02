@@ -1,8 +1,9 @@
-import java.util.ArrayList;
+package com.chitchat.app;
+
 import java.util.List;
 
 public class FriendService {
-    private User user; /* User is being imported into this class
+    private User user; /* com.chitchat.app.User is being imported into this class
                   so we can add the friend into its ArrayList. */
     private List<User> friends;
 
@@ -18,5 +19,6 @@ public class FriendService {
 
     public void removeFriend(User friend) {
         friends.remove(friend);
+        System.out.println(user.getFname() + " has removed " + friend.getFname());
     }
 }
