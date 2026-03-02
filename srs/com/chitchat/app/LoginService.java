@@ -4,43 +4,34 @@ import java.util.Scanner;
 import java.util.List;
 
 public class LoginService {
-    private List<User> allUsers;
-    private User empty = new User(); // To check if anyone is logged out.
-    private User currentUser = empty;
-    private Scanner s = new Scanner(System.in);
-
-    private User user;
-    public LoginService(User user) {
-        this.user = user;
-    }
+    private static List<User> allUsers;
+    private static User empty = new User(); // To check if anyone is logged out.
+    private static User currentUser = empty;
 
     // Mainly for debugging
-    public void display(){
+    public static void display(User user){
         System.out.println("Name: " + user.getFname() + " " + user.getLname());
         System.out.println("Username: " + user.getUsername());
         System.out.println("Password: " + user.getPassword());
         System.out.println("Hashed Password: " + user.getHashedPassword());
+        user.printList(user);
     }
 
     // This format is for terminal, will change to use for GUI later.
-    public void initialize() {
-        System.out.print("First name: ");
-        user.setFname(s.next());
-        System.out.print("Last name: ");
-        user.setLname(s.next());
-        System.out.print("Username: ");
-        user.setUsername(s.next());
-        System.out.print("Password: ");
-        user.setPassword(s.next());
-        System.out.println("\n");
+    public static void initialize(User user, String Fname, String Lname, String username, String password) {
+        user.setFname(Fname);
+        user.setLname(Lname);
+        user.setUsername(username);
+        user.setPassword(password);
         user.setNewAccount(false);
-        display();
+        UserManager.addUser(user);
+        display(user);
     }
 
-    public void login() {
+    public static void login(User user, String Fname, String Lname, String username, String password) {
         System.out.println(user.getNewAccount());
-        if ((currentUser == empty) && (!user.getNewAccount())) display();
-        else if ((currentUser == empty) && (user.getNewAccount())) initialize();
+        if ((currentUser == empty) && (!user.getNewAccount())) display(user);
+        else if ((currentUser == empty) && (user.getNewAccount())) initialize(user, Fname, Lname, username, password);
         else {
             System.out.println("com.chitchat.app.User is currently logged in.");
             return;
@@ -49,7 +40,7 @@ public class LoginService {
         currentUser = user;
     }
 
-    public void logout() {
+    public static void logout(User user) {
         currentUser = empty;
         System.out.println("Logged out: " + user.getUsername() + "\n");
     }

@@ -96,7 +96,8 @@ public class User {
     public void printList(User u) {
         System.out.print("Friends: ");
         for (User i: u.getFriendList()) {
-            System.out.print(i.getFname() + " " + i.getLname() + ", ");
+            System.out.print(i.getFname() + " " + i.getLname() + " | ");
         }
+        System.out.println(" ");
     }
 }

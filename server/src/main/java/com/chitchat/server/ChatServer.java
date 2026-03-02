@@ -1,8 +1,12 @@
 package com.chitchat.server;
 
+import com.chitchat.app.UserManager;
+import com.chitchat.app.User;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -10,6 +14,9 @@ public class ChatServer {
 
     private static final int PORT = 5050;
     private static final ExecutorService pool = Executors.newCachedThreadPool();
+
+    // Global list of all users ever created
+    private static final List<User> allUsers = new CopyOnWriteArrayList<>();
 
     public static void main(String[] args) {
         System.out.println("ChitChat Server started on port " + PORT);

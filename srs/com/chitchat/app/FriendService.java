@@ -13,8 +13,10 @@ public class FriendService {
     }
 
     public void addFriend(User friend) {
-        friends.add(friend);
-        System.out.println(user.getFname() + " has added " + friend.getFname());
+        if (!friend.getNewAccount()) { // if friend is not a new account (uninitialized) continue
+            friends.add(friend);
+            System.out.println(user.getUsername() + " has added " + friend.getUsername());
+        }
     }
 
     public void removeFriend(User friend) {
