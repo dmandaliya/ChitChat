@@ -2,7 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FriendService {
-    private User user; /* User is being imported into this class
+    private User user; /* com.chitchat.app.User is being imported into this class
                   so we can add the friend into its ArrayList. */
     private List<User> friends;
 
