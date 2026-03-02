@@ -20,7 +20,8 @@ public class ChatClient {
             System.out.println(in.readLine());
 
             while (true) {
-                System.out.print("Enter message: ");
+                System.out.println("What do you want to do?");
+                System.out.println("login\nlogout\nfriend");
                 String message = scanner.nextLine();
                 out.println(message);
 

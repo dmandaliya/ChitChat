@@ -12,7 +12,7 @@ public class ClientHandler implements Runnable {
     private final Socket socket;
     User user;
     FriendService friend;
-    LoginService login;
+    LoginService loginUser;
 
     // Constructor
     public ClientHandler(Socket socket) {
@@ -23,8 +23,8 @@ public class ClientHandler implements Runnable {
     public void run() {
 
         user = new User(); // or later assign from login info
-        friend = new FriendService(user);
-        login = new LoginService(user);
+        friend = new FriendService(user); // bottom comment applies here too
+        loginUser = new LoginService(user); // will eventually make static for efficiency
 
         try (
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -34,10 +34,25 @@ public class ClientHandler implements Runnable {
 
             // Recieving from client
             String line;
+
+            // parsing msg from client and storing it into String message.
             while ((line = in.readLine()) != null) {
-                // parse msg from client
-                System.out.println("From " + socket + ": " + line);
-                out.println("RECEIVED: " + line);
+
+                String message = line.trim(); // stores client msg
+
+                System.out.println("From " + socket + ": " + message);
+
+                if (message.startsWith("login")) {
+                    loginUser.login(); // for testing purposes it asks login info in server
+                    out.println("LOGIN SUCCESS");
+                }
+                if (message.startsWith("logout")) {
+                    loginUser.logout();
+                    out.println("LOGOUT SUCCESS");
+                }
+                else {
+                    out.println("UNKNOWN COMMAND");
+                }
             }
 
         } catch (IOException e) {
