@@ -5,8 +5,6 @@ import java.util.List;
 
 public class LoginService {
     private static List<User> allUsers;
-    private static User empty = new User(); // To check if anyone is logged out.
-    private static User currentUser = empty;
 
     // Mainly for debugging
     public static void display(User user){
@@ -18,7 +16,7 @@ public class LoginService {
     }
 
     // This format is for terminal, will change to use for GUI later.
-    public static void initialize(User user, String Fname, String Lname, String username, String password) {
+    public static void signup(User user, String Fname, String Lname, String username, String password) {
         user.setFname(Fname);
         user.setLname(Lname);
         user.setUsername(username);
@@ -31,21 +29,19 @@ public class LoginService {
 
     public static void login(User user, String Fname, String Lname, String username, String password) {
         System.out.println(user.getNewAccount());
-        if ((currentUser == empty) && (!user.getNewAccount())) {
+        if (!user.getNewAccount()) {
             display(user);
             user.setLoggedIn(true);
         }
-        else if ((currentUser == empty) && (user.getNewAccount())) initialize(user, Fname, Lname, username, password);
+        else if (user.getNewAccount()) System.out.println("Account doesn't exist.");
         else {
-            System.out.println("com.chitchat.app.User is currently logged in.");
+            System.out.println(user.getUsername() + " is currently logged in.");
             return;
         }
         System.out.println("Logged in: " + user.getUsername() + "\n");
-        currentUser = user;
     }
 
     public static void logout(User user) {
-        currentUser = empty;
         user.setLoggedIn(false);
         System.out.println("Logged out: " + user.getUsername() + "\n");
     }

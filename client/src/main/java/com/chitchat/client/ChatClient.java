@@ -21,7 +21,7 @@ public class ChatClient {
 
             while (true) {
                 System.out.println("What do you want to do?");
-                System.out.println("login\nlogout\nfriend");
+                System.out.println("login (ex: login Fname Lname Username Password\nlogout\nfriend");
                 String message = scanner.nextLine();
                 out.println(message);
 
