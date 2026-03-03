@@ -5,6 +5,7 @@ import java.net.Socket;
 
 import com.chitchat.app.User;
 import java.util.List;
+import java.util.ArrayList;
 import com.chitchat.app.LoginService;
 import com.chitchat.app.FriendService;
 import com.chitchat.app.UserManager;
@@ -14,7 +15,7 @@ public class ClientHandler implements Runnable {
     User clientUser = null;
     private final Socket socket;
     User user;
-    User test; // user for testing
+    User user2;
     FriendService friend;
     LoginService loginUser;
     List<User> allUsers = UserManager.getAllUsers();
@@ -33,17 +34,26 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    public static List<String> parseList(String msg) {
+        // Split the msg string by spaces
+        String[] words = msg.split(" ");
+
+        // Create a list to store words except the first
+        List<String> result = new ArrayList<>();
+
+        // Start from index 1 to skip the first word
+        for (int i = 1; i < words.length; i++) {
+            result.add(words[i]);
+        }
+
+        return result;
+    }
+
     @Override
     public void run() {
 
-        // test user
-        test = new User("Fname", "Lname");
-        test.setUsername("tester123");
-        test.setPassword("secret678");
-        test.setNewAccount(false);
-        UserManager.addUser(test);
-
-        user = new User(); // or later assign from login info
+        user = new User();
+        user2 = new User();
 
         try (
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -58,15 +68,16 @@ public class ClientHandler implements Runnable {
             while ((line = in.readLine()) != null) {
 
                 String message = line.trim(); // stores client msg
+                List<String> parsedMsg = parseList(message);
 
                 System.out.println("From " + socket + ": " + message);
 
-                // logging in
-                if ((message.startsWith("login") && (clientUser == null))) {
+                // signin in
+                if ((message.startsWith("signup") && (clientUser == null))) {
                     clientUser = user; // assigns user to client. (change 'user' to the user u want to store to client)
-                    LoginService.login(user, "Ayden", "Sendrea", "aydsman", "passcode123"); // for testing purposes it asks login info in server
+                    LoginService.signup(user, parsedMsg.get(0), parsedMsg.get(1), parsedMsg.get(2), parsedMsg.get(3)); // for testing purposes it asks login info in server
                     UserManager.addOnlineUser(user); // adds this to list of online users.
-                    out.println("LOGIN SUCCESS");
+                    out.println("SIGNUP SUCCESS");
                 }
                 // logging out
                 else if ((message.startsWith("logout") && (clientUser != null))) {
@@ -77,7 +88,7 @@ public class ClientHandler implements Runnable {
 
                 // adding friend
                 else if ((message.startsWith("friend") && (clientUser == null))) {
-                    FriendService.addFriend(user, test); // main user adds test as friend
+                    FriendService.addFriend(user, user2); // main user adds test as friend
                     user.printList(user);
                     out.println("ADDED FRIEND");
                 }
