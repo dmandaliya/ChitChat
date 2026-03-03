@@ -25,12 +25,16 @@ public class LoginService {
         user.setPassword(password);
         user.setNewAccount(false);
         UserManager.addUser(user);
+        user.setLoggedIn(true);
         display(user);
     }
 
     public static void login(User user, String Fname, String Lname, String username, String password) {
         System.out.println(user.getNewAccount());
-        if ((currentUser == empty) && (!user.getNewAccount())) display(user);
+        if ((currentUser == empty) && (!user.getNewAccount())) {
+            display(user);
+            user.setLoggedIn(true);
+        }
         else if ((currentUser == empty) && (user.getNewAccount())) initialize(user, Fname, Lname, username, password);
         else {
             System.out.println("com.chitchat.app.User is currently logged in.");
@@ -42,6 +46,7 @@ public class LoginService {
 
     public static void logout(User user) {
         currentUser = empty;
+        user.setLoggedIn(false);
         System.out.println("Logged out: " + user.getUsername() + "\n");
     }
 }

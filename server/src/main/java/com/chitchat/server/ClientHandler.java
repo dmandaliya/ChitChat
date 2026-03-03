@@ -17,10 +17,20 @@ public class ClientHandler implements Runnable {
     User test; // user for testing
     FriendService friend;
     LoginService loginUser;
+    List<User> allUsers = UserManager.getAllUsers();
+    List<User> allOnlineUsers = UserManager.getAllOnlineUsers();
 
     // Constructor
     public ClientHandler(Socket socket) {
         this.socket = socket;
+    }
+
+    // helper method to print lists
+    public void printList(List<User> list, String msg) {
+        System.out.println(msg + ": " + list.size());
+        for (User u : list) {
+            System.out.println("User: " + u.getUsername());
+        }
     }
 
     @Override
@@ -33,9 +43,8 @@ public class ClientHandler implements Runnable {
         test.setNewAccount(false);
         UserManager.addUser(test);
 
-
         user = new User(); // or later assign from login info
-        friend = new FriendService(user); // bottom comment applies here too
+
         try (
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
@@ -53,20 +62,22 @@ public class ClientHandler implements Runnable {
                 System.out.println("From " + socket + ": " + message);
 
                 // logging in
-                if (message.startsWith("login")) {
+                if ((message.startsWith("login") && (clientUser == null))) {
                     clientUser = user; // assigns user to client. (change 'user' to the user u want to store to client)
                     LoginService.login(user, "Ayden", "Sendrea", "aydsman", "passcode123"); // for testing purposes it asks login info in server
+                    UserManager.addOnlineUser(user); // adds this to list of online users.
                     out.println("LOGIN SUCCESS");
                 }
                 // logging out
-                else if (message.startsWith("logout")) {
+                else if ((message.startsWith("logout") && (clientUser != null))) {
                     LoginService.logout(user);
+                    clientUser = null;
                     out.println("LOGOUT SUCCESS");
                 }
 
                 // adding friend
-                else if (message.startsWith("friend")) {
-                    friend.addFriend(test); // main user adds test as friend
+                else if ((message.startsWith("friend") && (clientUser == null))) {
+                    FriendService.addFriend(user, test); // main user adds test as friend
                     user.printList(user);
                     out.println("ADDED FRIEND");
                 }
@@ -74,14 +85,13 @@ public class ClientHandler implements Runnable {
                     out.println("UNKNOWN COMMAND");
                 }
                 // print list of every created user
-                List<User> allUsers = UserManager.getAllUsers();
-                System.out.println("Current total users: " + allUsers.size());
-                for (User u : allUsers) {
-                    System.out.println("User: " + u.getUsername());
-                }
+                printList(allUsers, "All users created");
             }
 
+            // when client exits
         } catch (IOException e) {
+            UserManager.removeOnlineUser(clientUser);
+            printList(allOnlineUsers, "All online users:");
             System.out.println("Client disconnected: " + socket);
         } finally {
             try { socket.close(); } catch (IOException ignored) {}

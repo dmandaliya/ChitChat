@@ -67,10 +67,12 @@ public class User {
         return this.hashedPassword;
     }
 
-    // -------- Get Friendlist --------
+    // -------- Get Friendlist / Add friend to users friendlist --------
     public List<User> getFriendList() {
         return friendList;
     }
+    public void addToList(User friend) { friendList.add(friend); }
+    public void removeFromList(User friend) { friendList.remove(friend); }
 
     // -------- Set/Get loggedIn --------
     public boolean getLoggedIn() {return loggedIn;}
