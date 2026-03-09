@@ -20,12 +20,18 @@ public class ChatClient {
             System.out.println(in.readLine());
 
             while (true) {
-                System.out.print("Enter message: ");
+                System.out.print("What would you like to do:\n" +
+                        "1) register (ex: register Fname Lname username password)\n" +
+                        "2) login (ex: login username password)\n" +
+                        "3) friend (ex: friend username)\n" +
+                        "4) logout\n>");
                 String message = scanner.nextLine();
                 out.println(message);
 
-                String response = in.readLine();
-                System.out.println("Server: " + response);
+                String response;
+                while (!(response = in.readLine()).equals("END")) {
+                    System.out.println("Server: " + response);
+                }
             }
 
         } catch (IOException e) {
