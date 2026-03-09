@@ -68,10 +68,12 @@ public class User {
         return this.hashedPassword;
     }
 
-    // -------- Get Friendlist --------
+    // -------- Get Friendlist / Add friend to users friendlist --------
     public List<User> getFriendList() {
         return friendList;
     }
+    public void addToList(User friend) { friendList.add(friend); }
+    public void removeFromList(User friend) { friendList.remove(friend); }
 
     // -------- Get/Add/Remove pending requests --------
     public List<User> getPendingRequests() {
@@ -108,7 +110,8 @@ public class User {
     public void printList(User u) {
         System.out.print("Friends: ");
         for (User i: u.getFriendList()) {
-            System.out.print(i.getFname() + " " + i.getLname() + ", ");
+            System.out.print(i.getFname() + " " + i.getLname() + " | ");
         }
+        System.out.println(" ");
     }
 }
