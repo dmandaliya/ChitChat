@@ -6,7 +6,14 @@ public enum MessageType {
     LOGIN_FAIL,
     PUBLIC_MESSAGE,
     PRIVATE_MESSAGE,
+    ROOM_MESSAGE,
     USER_LIST,
     LOGOUT,
+    READ_RECEIPT,
+    CALL_OFFER,
+    CALL_ANSWER,
+    CALL_ICE,
+    CALL_END,
+    CALL_REJECT,
     ERROR
 }

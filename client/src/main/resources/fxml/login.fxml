@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<StackPane xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.chitchat.client.controller.LoginController"
+           styleClass="auth-root">
+
+  <VBox alignment="CENTER" spacing="0" maxWidth="380">
+    <padding><Insets top="40" right="30" bottom="40" left="30"/></padding>
+
+    <Label text="ChitChat" styleClass="brand-title"/>
+    <Label text="Connect with everyone, everywhere." styleClass="brand-sub"/>
+
+    <TabPane fx:id="tabPane" styleClass="auth-tabs" VBox.vgrow="NEVER">
+
+      <!-- Login Tab -->
+      <Tab text="Login" closable="false">
+        <VBox spacing="12" styleClass="auth-form">
+          <padding><Insets top="20" right="0" bottom="10" left="0"/></padding>
+          <TextField fx:id="loginUsername" promptText="Username" styleClass="auth-input"/>
+          <PasswordField fx:id="loginPassword" promptText="Password" styleClass="auth-input"/>
+          <Label fx:id="loginError" styleClass="error-label" wrapText="true"/>
+          <Button text="Login" onAction="#handleLogin" styleClass="btn-primary" maxWidth="Infinity"/>
+        </VBox>
+      </Tab>
+
+      <!-- Register Tab -->
+      <Tab text="Register" closable="false">
+        <VBox spacing="12" styleClass="auth-form">
+          <padding><Insets top="20" right="0" bottom="10" left="0"/></padding>
+          <HBox spacing="8">
+            <TextField fx:id="regFname" promptText="First name" styleClass="auth-input" HBox.hgrow="ALWAYS"/>
+            <TextField fx:id="regLname" promptText="Last name" styleClass="auth-input" HBox.hgrow="ALWAYS"/>
+          </HBox>
+          <TextField fx:id="regUsername" promptText="Username" styleClass="auth-input"/>
+          <PasswordField fx:id="regPassword" promptText="Password" styleClass="auth-input"/>
+          <Label fx:id="regError" styleClass="error-label" wrapText="true"/>
+          <Button text="Create Account" onAction="#handleRegister" styleClass="btn-primary" maxWidth="Infinity"/>
+        </VBox>
+      </Tab>
+
+    </TabPane>
+  </VBox>
+
+</StackPane>
