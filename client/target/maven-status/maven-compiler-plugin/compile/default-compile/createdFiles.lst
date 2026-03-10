@@ -1,8 +1,0 @@
-com/chitchat/client/ChatClientApp.class
-com/chitchat/client/service/WebSocketService$1.class
-com/chitchat/client/service/ApiService.class
-module-info.class
-com/chitchat/client/controller/ChatController.class
-com/chitchat/client/controller/LoginController.class
-com/chitchat/client/model/UserSession.class
-com/chitchat/client/service/WebSocketService.class
