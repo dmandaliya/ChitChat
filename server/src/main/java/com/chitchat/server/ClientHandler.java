@@ -72,16 +72,16 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    // register <username> <fname> <lname> <password>
+    // register <fname> <lname> <username> <password>
     private void handleRegister(String line) {
         String[] parts = line.split(" ");
         if (parts.length < 5) {
-            out.println("Usage: register <username> <fname> <lname> <password>");
+            out.println("Usage: register <fname> <lname> <username> <password>");
             return;
         }
-        String username = parts[1];
-        String fname    = parts[2];
-        String lname    = parts[3];
+        String fname    = parts[1];
+        String lname    = parts[2];
+        String username = parts[3];
         String password = parts[4];
 
         if (ChatServer.registeredUsers.containsKey(username)) {

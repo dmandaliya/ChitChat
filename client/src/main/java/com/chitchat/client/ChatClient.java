@@ -3,6 +3,7 @@ package com.chitchat.client;
 import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.concurrent.Semaphore;
 
 public class ChatClient {
 
@@ -19,6 +20,26 @@ public class ChatClient {
             System.out.println("Connected to server");
             System.out.println(in.readLine());
 
+            // Released by reader thread each time it receives "END"
+            Semaphore endSignal = new Semaphore(0);
+
+            Thread reader = new Thread(() -> {
+                try {
+                    String response;
+                    while ((response = in.readLine()) != null) {
+                        if (response.equals("END")) {
+                            endSignal.release();
+                        } else {
+                            System.out.println("Server: " + response);
+                        }
+                    }
+                } catch (IOException e) {
+                    System.out.println("Disconnected from server.");
+                }
+            });
+            reader.setDaemon(true);
+            reader.start();
+
             while (true) {
                 System.out.print("What would you like to do:\n" +
                         "1) register (ex: register Fname Lname username password)\n" +
@@ -28,13 +49,12 @@ public class ChatClient {
                 String message = scanner.nextLine();
                 out.println(message);
 
-                String response;
-                while (!(response = in.readLine()).equals("END")) {
-                    System.out.println("Server: " + response);
-                }
+                // Wait for server to finish responding before showing menu again
+                endSignal.acquire();
+                System.out.println();
             }
 
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
