@@ -32,6 +32,12 @@ public class ClientHandler implements Runnable {
         friend = new FriendService(user);
         login = new LoginService(user);
 
+        // for testing
+        User a = new User("Ayden", "Sendrea", "aydsman", "123");
+        User b = new User("Jon", "Jones", "jonny", "123");
+        ChatServer.registeredUsers.put(a.getUsername(), a);
+        ChatServer.registeredUsers.put(b.getUsername(), b);
+
         try (
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 PrintWriter writer = new PrintWriter(socket.getOutputStream(), true)
