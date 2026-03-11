@@ -18,6 +18,7 @@ public class User {
     private boolean newAccount = true; // Default true until values are chosen.
     private boolean loggedIn = false;
     private List<Integer> conversationIds = new ArrayList<>();
+    private Profile profile = new Profile();
 
     public User() {
         // For initializing a user with all empty values.
@@ -115,6 +116,10 @@ public class User {
     public void setPreference(PreferenceService preference) {
         this.preference = preference;
     }
+
+    // -------- Get profile --------
+    public Profile getProfile() { return profile; }
+    public void setProfile(Profile profile) { this.profile = profile; }
 
     // -------- Get/Add conversationIds --------
     public List<Integer> getConversationIds() { return conversationIds; }
