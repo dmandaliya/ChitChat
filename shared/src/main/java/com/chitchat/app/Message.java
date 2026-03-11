@@ -4,6 +4,7 @@ public class Message {
 
     private String sender;  // username of sender
     private String content;
+    private String timestamp; // later
 
     public Message(String sender, String content) {
         this.sender = sender;
