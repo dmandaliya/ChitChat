@@ -108,6 +108,10 @@ public class ClientHandler implements Runnable {
 
     // register <fname> <lname> <username> <password>
     private void handleRegister(String line) {
+        if (login.isLoggedIn()) {
+            out.println("You must logout before registering a new account.");
+            return;
+        }
         String[] parts = line.split(" ");
         if (parts.length < 5) {
             out.println("Usage: register <fname> <lname> <username> <password>");
