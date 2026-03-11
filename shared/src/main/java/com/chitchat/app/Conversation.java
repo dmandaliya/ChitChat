@@ -23,6 +23,10 @@ public class Conversation {
         messages.add(message);
     }
 
+    public void addMember(User user) {
+        members.add(user);
+    }
+
     // Check if a user (by username) is a member of this conversation
     public boolean hasMember(String username) {
         return members.stream().anyMatch(u -> u.getUsername().equals(username));

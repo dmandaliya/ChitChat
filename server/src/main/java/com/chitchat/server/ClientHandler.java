@@ -89,6 +89,15 @@ public class ClientHandler implements Runnable {
                 } else if (line.startsWith("unfriend ")) {
                     handleUnfriend(line.substring(9).trim());
 
+                } else if (line.equals("pendingrequests")) {
+                    handlePendingRequests();
+
+                } else if (line.startsWith("addtochat ")) {
+                    handleAddToChat(line);
+
+                } else if (line.equals("whoami")) {
+                    handleWhoAmI();
+
                 } else {
                     out.println("RECEIVED: " + line);
                 }
@@ -186,13 +195,19 @@ public class ClientHandler implements Runnable {
         login.login(); // updates LoginService state (currentUser), prints to server console
         ChatServer.connectedClients.put(user.getUsername(), this);
 
-        // Notify user of any pending friend requests received while offline
+        // Notify user of anything that happened while offline
         List<User> pending = user.getPendingRequests();
-        if (!pending.isEmpty()) {
+        List<Integer> convos = user.getConversationIds();
+        if (!pending.isEmpty() || !convos.isEmpty()) {
             out.println("While you were offline:");
-            out.println("Friend requests: " + pending.size());
-            for (User requester : pending) {
-                out.println("  - " + requester.getUsername() + " sent you a friend request.");
+            if (!pending.isEmpty()) {
+                out.println("Friend requests: " + pending.size());
+                for (User requester : pending) {
+                    out.println("  - " + requester.getUsername() + " sent you a friend request.");
+                }
+            }
+            if (!convos.isEmpty()) {
+                out.println("You were added to " + convos.size() + " chat(s): " + convos);
             }
         }
     }
@@ -239,6 +254,12 @@ public class ClientHandler implements Runnable {
         // Already friends check
         if (user.getFriendList().contains(targetUser)) {
             out.println("You are already friends with " + targetUsername + ".");
+            return;
+        }
+
+        // Duplicate pending request check
+        if (targetUser.getPendingRequests().contains(user)) {
+            out.println("You already sent a friend request to " + targetUsername + ".");
             return;
         }
 
@@ -295,6 +316,11 @@ public class ClientHandler implements Runnable {
                 return;
             }
 
+            if (members.contains(target)) {
+                out.println(targetUsername + " is already in this chat.");
+                return;
+            }
+
             members.add(target);
         }
 
@@ -335,11 +361,17 @@ public class ClientHandler implements Runnable {
 
         // Deliver to all members in the conversation
         String formatted = "[" + user.getUsername() + "]: " + content;
+        List<String> offline = new ArrayList<>();
         for (String username : MessageHandler.getMembers(convoId)) {
             ClientHandler handler = ChatServer.connectedClients.get(username);
             if (handler != null) {
                 handler.sendMessage(formatted);
+            } else if (!username.equals(user.getUsername())) {
+                offline.add(username);
             }
+        }
+        if (!offline.isEmpty()) {
+            out.println("(Offline and did not receive message: " + String.join(", ", offline) + ")");
         }
     }
 
@@ -482,6 +514,75 @@ public class ClientHandler implements Runnable {
         List<String> names = new ArrayList<>();
         for (User f : friends) names.add(f.getUsername());
         out.println("Friends: " + String.join(", ", names));
+    }
+
+    // pendingrequests
+    private void handlePendingRequests() {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        List<User> pending = user.getPendingRequests();
+        if (pending.isEmpty()) {
+            out.println("No pending friend requests.");
+            return;
+        }
+        out.println("Pending friend requests: " + pending.size());
+        for (User requester : pending) {
+            out.println("  - " + requester.getUsername());
+        }
+    }
+
+    // addtochat <convo_id> <username>
+    private void handleAddToChat(String line) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        String[] parts = line.split(" ");
+        if (parts.length < 3) {
+            out.println("Usage: addtochat <convo_id> <username>");
+            return;
+        }
+        int convoId;
+        try {
+            convoId = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            out.println("Invalid conversation ID.");
+            return;
+        }
+        Conversation convo = MessageHandler.getConversation(convoId);
+        if (convo == null || !convo.hasMember(user.getUsername())) {
+            out.println("Conversation not found or you are not a member.");
+            return;
+        }
+        String targetUsername = parts[2];
+        User target = ChatServer.registeredUsers.get(targetUsername);
+        if (target == null || !user.getFriendList().contains(target)) {
+            out.println(targetUsername + " is not in your friends list.");
+            return;
+        }
+        if (convo.hasMember(targetUsername)) {
+            out.println(targetUsername + " is already in this chat.");
+            return;
+        }
+        convo.addMember(target);
+        target.addConversationId(convoId);
+        out.println(targetUsername + " added to chat " + convoId + ".");
+        ClientHandler targetHandler = ChatServer.connectedClients.get(targetUsername);
+        if (targetHandler != null) {
+            targetHandler.sendMessage(user.getUsername() + " added you to chat " + convoId + ".");
+        }
+        System.out.println(user.getUsername() + " added " + targetUsername + " to chat " + convoId);
+    }
+
+    // whoami
+    private void handleWhoAmI() {
+        if (!login.isLoggedIn()) {
+            out.println("You are not logged in.");
+            return;
+        }
+        out.println("Logged in as: " + user.getUsername());
     }
 
     private void printServerStatus() {
