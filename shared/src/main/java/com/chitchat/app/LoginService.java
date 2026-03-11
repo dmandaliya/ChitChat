@@ -38,20 +38,17 @@ public class LoginService {
     }
 
     public void login() {
-        System.out.println(user.getNewAccount());
-        if ((currentUser == empty) && (!user.getNewAccount())) display();
-        else if ((currentUser == empty) && (user.getNewAccount())) initialize();
-        else {
-            System.out.println("com.chitchat.app.User is currently logged in.");
+        if (currentUser != empty) {
+            System.out.println("User is currently logged in.");
             return;
         }
-        System.out.println("Logged in: " + user.getUsername() + "\n");
+        System.out.println("Logged in: " + user.getUsername());
         currentUser = user;
     }
 
     public void logout() {
         currentUser = empty;
-        System.out.println("Logged out: " + user.getUsername() + "\n");
+        System.out.println("Logged out: " + user.getUsername());
     }
 
     public boolean isLoggedIn() {

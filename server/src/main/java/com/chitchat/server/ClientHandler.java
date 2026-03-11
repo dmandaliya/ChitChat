@@ -7,6 +7,11 @@ import com.chitchat.app.User;
 import com.chitchat.app.LoginService;
 import com.chitchat.app.FriendService;
 import com.chitchat.app.EncryptionService;
+import com.chitchat.app.Conversation;
+import com.chitchat.app.Message;
+import com.chitchat.app.MessageHandler;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ClientHandler implements Runnable {
 
@@ -32,11 +37,6 @@ public class ClientHandler implements Runnable {
         friend = new FriendService(user);
         login = new LoginService(user);
 
-        // for testing
-        User a = new User("Ayden", "Sendrea", "aydsman", "123");
-        User b = new User("Jon", "Jones", "jonny", "123");
-        ChatServer.registeredUsers.put(a.getUsername(), a);
-        ChatServer.registeredUsers.put(b.getUsername(), b);
 
         try (
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -60,6 +60,12 @@ public class ClientHandler implements Runnable {
 
                 } else if (line.equals("logout")) {
                     handleLogout();
+
+                } else if (line.startsWith("createchat ")) {
+                    handleCreateChat(line);
+
+                } else if (line.startsWith("chat ")) {
+                    handleSendMessage(line);
 
                 } else {
                     out.println("RECEIVED: " + line);
@@ -153,6 +159,16 @@ public class ClientHandler implements Runnable {
         login = new LoginService(user);
         login.login(); // updates LoginService state (currentUser), prints to server console
         ChatServer.connectedClients.put(user.getUsername(), this);
+
+        // Notify user of any pending friend requests received while offline
+        List<User> pending = user.getPendingRequests();
+        if (!pending.isEmpty()) {
+            out.println("While you were offline:");
+            out.println("Friend requests: " + pending.size());
+            for (User requester : pending) {
+                out.println("  - " + requester.getUsername() + " sent you a friend request.");
+            }
+        }
     }
 
     private void handleLogout() {
@@ -164,6 +180,7 @@ public class ClientHandler implements Runnable {
         String username = user.getUsername();
         ChatServer.connectedClients.remove(username);
         login.logout(); // updates LoginService state (currentUser = empty), prints to server console
+        printServerStatus();
 
         // Reset to a fresh unauthenticated state
         user = new User();
@@ -194,21 +211,103 @@ public class ClientHandler implements Runnable {
         }
 
         ClientHandler targetHandler = ChatServer.connectedClients.get(targetUsername);
-        if (targetHandler == null) {
-            out.println(targetUsername + " is not online.");
-            return;
-        }
 
         // If target already sent us a request, accept it — mutual add via FriendService
         if (user.getPendingRequests().contains(targetUser)) {
-            targetHandler.friend.acceptRequest(user); // adds both to each other's friend lists
+            if (targetHandler != null) {
+                targetHandler.friend.acceptRequest(user);
+                targetHandler.sendMessage("You and " + myUsername + " are now friends!");
+            } else {
+                // Accept locally — target will see it when they log in
+                friend.acceptRequest(targetUser);
+            }
             out.println("You and " + targetUsername + " are now friends!");
-            targetHandler.sendMessage("You and " + myUsername + " are now friends!");
         } else {
-            // Send the request via FriendService — adds user to targetUser's pending list
+            // Queue the request on the target user
             friend.addFriend(targetUser);
-            targetHandler.sendMessage(myUsername + " has sent you a friend request.");
+            if (targetHandler != null) {
+                targetHandler.sendMessage(myUsername + " has sent you a friend request.");
+            }
+            System.out.println(myUsername + " sent a friend request to " + targetUsername);
             out.println("Friend request sent to " + targetUsername + ".");
+        }
+    }
+
+    // createchat <user1> <user2> ...
+    private void handleCreateChat(String line) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in to create a chat.");
+            return;
+        }
+
+        String[] parts = line.split(" ");
+        if (parts.length < 2) {
+            out.println("Usage: createchat <user1> <user2> ...");
+            return;
+        }
+
+        List<User> members = new ArrayList<>();
+        members.add(user); // include the sender
+
+        for (int i = 1; i < parts.length; i++) {
+            String targetUsername = parts[i];
+
+            if (targetUsername.equals(user.getUsername())) {
+                out.println("You cannot add yourself to a chat.");
+                return;
+            }
+
+            User target = ChatServer.registeredUsers.get(targetUsername);
+            if (target == null) {
+                out.println("User not found: " + targetUsername);
+                return;
+            }
+
+            members.add(target);
+        }
+
+        Conversation convo = MessageHandler.createConversation(members);
+        if (convo != null) {
+            out.println("Chat created! Conversation ID: " + convo.getId());
+            System.out.println("New Chat Created | ID: " + convo.getId() + " | Members: " + MessageHandler.getMembers(convo.getId()));
+        }
+    }
+
+    // chat <convo_id> <message>
+    private void handleSendMessage(String line) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in to send messages.");
+            return;
+        }
+
+        String[] parts = line.split(" ", 3);
+        if (parts.length < 3) {
+            out.println("Usage: chat <convo_id> <message>");
+            return;
+        }
+
+        int convoId;
+        try {
+            convoId = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            out.println("Invalid conversation ID.");
+            return;
+        }
+
+        String content = parts[2];
+        Message msg = MessageHandler.sendMessage(user, convoId, content);
+        if (msg == null) {
+            out.println("Could not send message. Conversation not found or you are not a member.");
+            return;
+        }
+
+        // Deliver to all members in the conversation
+        String formatted = "[" + user.getUsername() + "]: " + content;
+        for (String username : MessageHandler.getMembers(convoId)) {
+            ClientHandler handler = ChatServer.connectedClients.get(username);
+            if (handler != null) {
+                handler.sendMessage(formatted);
+            }
         }
     }
 

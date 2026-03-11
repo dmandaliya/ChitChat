@@ -41,11 +41,6 @@ public class ChatClient {
             reader.start();
 
             while (true) {
-                System.out.print("What would you like to do:\n" +
-                        "1) register (ex: register Fname Lname username password)\n" +
-                        "2) login (ex: login username password)\n" +
-                        "3) friend (ex: friend username)\n" +
-                        "4) logout\n>");
                 String message = scanner.nextLine();
                 out.println(message);
 

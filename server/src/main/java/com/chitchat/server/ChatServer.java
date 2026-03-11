@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import com.chitchat.app.User;
 
 public class ChatServer {
 
@@ -20,6 +21,16 @@ public class ChatServer {
 
     public static void main(String[] args) {
         System.out.println("ChitChat Server started on port " + PORT);
+
+        // Test users — loaded once at server startup
+        User a = new User("Ayden", "Sendrea", "aydsman", "123");
+        User b = new User("Jon", "Jones", "jonny", "123");
+        User c = new User("Bob", "Bones", "bobby", "123");
+        User d = new User("Ronald", "Rones", "ron123", "123");
+        registeredUsers.put(a.getUsername(), a);
+        registeredUsers.put(b.getUsername(), b);
+        registeredUsers.put(c.getUsername(), c);
+        registeredUsers.put(d.getUsername(), d);
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
 
