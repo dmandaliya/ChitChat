@@ -17,6 +17,7 @@ public class User {
     private PreferenceService preference; // Preference OBJ for each user
     private boolean newAccount = true; // Default true until values are chosen.
     private boolean loggedIn = false;
+    private List<Integer> conversationIds = new ArrayList<>();
 
     public User() {
         // For initializing a user with all empty values.
@@ -26,6 +27,16 @@ public class User {
     public User (String fname, String lname) {
         this.Fname = fname;
         this.Lname = lname;
+        this.newAccount = false;
+    }
+
+    public User (String fname, String lname, String username, String password) {
+        this.Fname = fname;
+        this.Lname = lname;
+        this.username = username;
+        this.userPassword = password;
+        this.hashedPassword = EncryptionService.hashPassword(password);
+        this.newAccount = false;
     }
 
     // -------- Set/Get Fname (first name) --------
@@ -104,6 +115,10 @@ public class User {
     public void setPreference(PreferenceService preference) {
         this.preference = preference;
     }
+
+    // -------- Get/Add conversationIds --------
+    public List<Integer> getConversationIds() { return conversationIds; }
+    public void addConversationId(int id) { conversationIds.add(id); }
 
     public void printList(User u) {
         System.out.print("Friends: ");
