@@ -12,6 +12,7 @@ import com.chitchat.app.Message;
 import com.chitchat.app.MessageHandler;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class ClientHandler implements Runnable {
 
@@ -66,6 +67,27 @@ public class ClientHandler implements Runnable {
 
                 } else if (line.startsWith("chat ")) {
                     handleSendMessage(line);
+
+                } else if (line.equals("mychats")) {
+                    handleMyChats();
+
+                } else if (line.startsWith("history ")) {
+                    handleHistory(line);
+
+                } else if (line.startsWith("accept ")) {
+                    handleAcceptRequest(line.substring(7).trim());
+
+                } else if (line.startsWith("decline ")) {
+                    handleDeclineRequest(line.substring(8).trim());
+
+                } else if (line.equals("users")) {
+                    handleUsers();
+
+                } else if (line.equals("friends")) {
+                    handleFriends();
+
+                } else if (line.startsWith("unfriend ")) {
+                    handleUnfriend(line.substring(9).trim());
 
                 } else {
                     out.println("RECEIVED: " + line);
@@ -210,6 +232,12 @@ public class ClientHandler implements Runnable {
             return;
         }
 
+        // Already friends check
+        if (user.getFriendList().contains(targetUser)) {
+            out.println("You are already friends with " + targetUsername + ".");
+            return;
+        }
+
         ClientHandler targetHandler = ChatServer.connectedClients.get(targetUsername);
 
         // If target already sent us a request, accept it — mutual add via FriendService
@@ -258,8 +286,8 @@ public class ClientHandler implements Runnable {
             }
 
             User target = ChatServer.registeredUsers.get(targetUsername);
-            if (target == null) {
-                out.println("User not found: " + targetUsername);
+            if (target == null || !user.getFriendList().contains(target)) {
+                out.println(targetUsername + " is not in your friends list.");
                 return;
             }
 
@@ -309,6 +337,147 @@ public class ClientHandler implements Runnable {
                 handler.sendMessage(formatted);
             }
         }
+    }
+
+    // mychats
+    private void handleMyChats() {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        List<Integer> ids = user.getConversationIds();
+        if (ids.isEmpty()) {
+            out.println("You have no chats.");
+            return;
+        }
+        out.println("Your chats:");
+        for (int id : ids) {
+            out.println("  ID: " + id + " | Members: " + MessageHandler.getMembers(id));
+        }
+    }
+
+    // history <convo_id>
+    private void handleHistory(String line) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        String[] parts = line.split(" ");
+        if (parts.length < 2) {
+            out.println("Usage: history <convo_id>");
+            return;
+        }
+        int convoId;
+        try {
+            convoId = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            out.println("Invalid conversation ID.");
+            return;
+        }
+        Conversation convo = MessageHandler.getConversation(convoId);
+        if (convo == null || !convo.hasMember(user.getUsername())) {
+            out.println("Conversation not found or you are not a member.");
+            return;
+        }
+        List<Message> messages = convo.getMessages();
+        if (messages.isEmpty()) {
+            out.println("No messages yet.");
+            return;
+        }
+        for (Message msg : messages) {
+            out.println(msg.getSender() + ": " + msg.getContent());
+        }
+    }
+
+    // accept <username>
+    private void handleAcceptRequest(String targetUsername) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        User targetUser = ChatServer.registeredUsers.get(targetUsername);
+        if (targetUser == null) {
+            out.println("User does not exist.");
+            return;
+        }
+        if (!user.getPendingRequests().contains(targetUser)) {
+            out.println("No pending request from " + targetUsername + ".");
+            return;
+        }
+        friend.acceptRequest(targetUser);
+        out.println("You and " + targetUsername + " are now friends!");
+        ClientHandler targetHandler = ChatServer.connectedClients.get(targetUsername);
+        if (targetHandler != null) {
+            targetHandler.sendMessage("You and " + user.getUsername() + " are now friends!");
+        }
+    }
+
+    // decline <username>
+    private void handleDeclineRequest(String targetUsername) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        User targetUser = ChatServer.registeredUsers.get(targetUsername);
+        if (targetUser == null) {
+            out.println("User does not exist.");
+            return;
+        }
+        if (!user.getPendingRequests().contains(targetUser)) {
+            out.println("No pending request from " + targetUsername + ".");
+            return;
+        }
+        user.removePendingRequest(targetUser);
+        out.println("Declined friend request from " + targetUsername + ".");
+    }
+
+    // users
+    private void handleUsers() {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        out.println("Online: " + String.join(", ", ChatServer.connectedClients.keySet()));
+    }
+
+    // unfriend <username>
+    private void handleUnfriend(String targetUsername) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        User targetUser = ChatServer.registeredUsers.get(targetUsername);
+        if (targetUser == null) {
+            out.println("User does not exist.");
+            return;
+        }
+        if (!user.getFriendList().contains(targetUser)) {
+            out.println(targetUsername + " is not in your friends list.");
+            return;
+        }
+        friend.removeFriend(targetUser);
+        targetUser.getFriendList().remove(user);
+        out.println("You unfriended " + targetUsername + ".");
+        ClientHandler targetHandler = ChatServer.connectedClients.get(targetUsername);
+        if (targetHandler != null) {
+            targetHandler.sendMessage(user.getUsername() + " unfriended you.");
+        }
+    }
+
+    // friends
+    private void handleFriends() {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        List<User> friends = user.getFriendList();
+        if (friends.isEmpty()) {
+            out.println("You have no friends yet.");
+            return;
+        }
+        List<String> names = new ArrayList<>();
+        for (User f : friends) names.add(f.getUsername());
+        out.println("Friends: " + String.join(", ", names));
     }
 
     private void printServerStatus() {

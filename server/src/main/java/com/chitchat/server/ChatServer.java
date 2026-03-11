@@ -1,6 +1,8 @@
 package com.chitchat.server;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,6 +33,26 @@ public class ChatServer {
         registeredUsers.put(b.getUsername(), b);
         registeredUsers.put(c.getUsername(), c);
         registeredUsers.put(d.getUsername(), d);
+
+        // Server console — runs in background thread so it doesn't block the accept loop
+        Thread console = new Thread(() -> {
+            try (BufferedReader consoleIn = new BufferedReader(new InputStreamReader(System.in))) {
+                String cmd;
+                while ((cmd = consoleIn.readLine()) != null) {
+                    if (cmd.equals("onlineusers")) {
+                        System.out.println("Online: " + String.join(", ", connectedClients.keySet()));
+                    } else if (cmd.equals("totalusers")) {
+                        System.out.println("Registered: " + String.join(", ", registeredUsers.keySet()));
+                    } else {
+                        System.out.println("Unknown server command. Available: onlineusers, totalusers");
+                    }
+                }
+            } catch (IOException e) {
+                System.out.println("Server console error: " + e.getMessage());
+            }
+        });
+        console.setDaemon(true);
+        console.start();
 
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
 
