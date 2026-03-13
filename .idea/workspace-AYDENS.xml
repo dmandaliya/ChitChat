@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="7378c963-081b-4148-b598-3a2804cf4491" name="Changes" comment="Added profile class for each user to have.">
+      <change beforePath="$PROJECT_DIR$/server/target/classes/com/chitchat/server/ClientHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/server/target/classes/com/chitchat/server/ClientHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/target/classes/com/chitchat/app/Conversation.class" beforeDir="false" afterPath="$PROJECT_DIR$/shared/target/classes/com/chitchat/app/Conversation.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/shared/target/classes/com/chitchat/app/User.class" beforeDir="false" afterPath="$PROJECT_DIR$/shared/target/classes/com/chitchat/app/User.class" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_COMMON_BRANCH" value="main" />
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="ROOT_SYNC" value="SYNC" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;aydsman&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/dmandaliya/ChitChat.git&quot;,
+    &quot;accountId&quot;: &quot;67adbb28-118c-49fa-bc3d-38b316369c52&quot;
+  }
+}</component>
+  <component name="MacroExpansionManager">
+    <option name="directoryName" value="9VzBtkNC" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
+  <component name="ProjectId" id="3ADGOY1sOU60t0AwofkOwRqe2RD" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.ChatClient.executor": "Run",
+    "Application.ChatClient1.executor": "Run",
+    "Application.ChatClient2.executor": "Run",
+    "Application.ChatClient3.executor": "Run",
+    "Application.ChatClient4.executor": "Run",
+    "Application.ChatServer.executor": "Run",
+    "Application.Main.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultAutoModeForALLUsers.v1": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true",
+    "junie.onboarding.icon.badge.shown": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/aymat/OneDrive/Java Projects/ChitChatTester",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "onboarding.tips.debug.path": "C:/Users/aymat/OneDrive/Java Projects/ChitChatTester/src/Main.java",
+    "org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon": "",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "to.speed.mode.migration.done": "true",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RubyModuleManagerSettings">
+    <option name="blackListedRootsPaths">
+      <list>
+        <option value="$PROJECT_DIR$" />
+      </list>
+    </option>
+  </component>
+  <component name="RunManager" selected="Application.ChatClient4">
+    <configuration name="ChatClient1" type="Application" factoryName="Application" singleton="false">
+      <option name="ALTERNATIVE_JRE_PATH" value="ms-17" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <option name="MAIN_CLASS_NAME" value="com.chitchat.client.ChatClient" />
+      <module name="client" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ChatClient2" type="Application" factoryName="Application" singleton="false">
+      <option name="ALTERNATIVE_JRE_PATH" value="ms-17" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <option name="MAIN_CLASS_NAME" value="com.chitchat.client.ChatClient" />
+      <module name="client" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ChatClient3" type="Application" factoryName="Application" singleton="false">
+      <option name="ALTERNATIVE_JRE_PATH" value="ms-17" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <option name="MAIN_CLASS_NAME" value="com.chitchat.client.ChatClient" />
+      <module name="client" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ChatClient4" type="Application" factoryName="Application" singleton="false">
+      <option name="ALTERNATIVE_JRE_PATH" value="ms-17" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <option name="MAIN_CLASS_NAME" value="com.chitchat.client.ChatClient" />
+      <module name="client" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ChatServer" type="Application" factoryName="Application">
+      <option name="MAIN_CLASS_NAME" value="com.chitchat.server.ChatServer" />
+      <module name="server" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Main" type="Application" factoryName="Application">
+      <option name="ALTERNATIVE_JRE_PATH" value="ms-17" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <option name="MAIN_CLASS_NAME" value="com.chitchat.app.Main" />
+      <module name="shared" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Server + 2 Clients" type="CompoundRunConfigurationType">
+      <toRun name="ChatClient1" type="Application" />
+      <toRun name="ChatClient2" type="Application" />
+      <toRun name="ChatServer" type="Application" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Server + 4 Clients" type="CompoundRunConfigurationType">
+      <toRun name="ChatClient1" type="Application" />
+      <toRun name="ChatClient2" type="Application" />
+      <toRun name="ChatClient3" type="Application" />
+      <toRun name="ChatClient4" type="Application" />
+      <toRun name="ChatServer" type="Application" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Application.ChatServer" />
+      <item itemvalue="Application.ChatClient1" />
+      <item itemvalue="Application.ChatClient2" />
+      <item itemvalue="Application.ChatClient3" />
+      <item itemvalue="Application.ChatClient4" />
+      <item itemvalue="Application.Main" />
+      <item itemvalue="Compound.Server + 4 Clients" />
+      <item itemvalue="Compound.Server + 2 Clients" />
+    </list>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.26830.84" />
+        <option value="bundled-js-predefined-d6986cc7102b-3aa1da707db6-JavaScript-IU-252.26830.84" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="7378c963-081b-4148-b598-3a2804cf4491" name="Changes" comment="" />
+      <created>1772119699329</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1772119699329</updated>
+      <workItem from="1772119701054" duration="6077000" />
+      <workItem from="1772162496128" duration="14219000" />
+      <workItem from="1772407928740" duration="6527000" />
+      <workItem from="1772460379809" duration="2733000" />
+      <workItem from="1772479751688" duration="24480000" />
+      <workItem from="1773069893063" duration="353000" />
+      <workItem from="1773070553847" duration="795000" />
+      <workItem from="1773074911279" duration="7000" />
+      <workItem from="1773075274193" duration="8586000" />
+      <workItem from="1773232479835" duration="21147000" />
+    </task>
+    <task id="LOCAL-00001" summary="Added backend code">
+      <option name="closed" value="true" />
+      <created>1772256758779</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1772256758779</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Added backend code">
+      <option name="closed" value="true" />
+      <created>1772257956102</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1772257956102</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Added some of my backend code to ClientHandler">
+      <option name="closed" value="true" />
+      <created>1772416585256</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1772416585256</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Added some of my backend code to ClientHandler">
+      <option name="closed" value="true" />
+      <created>1772416775456</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1772416775456</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Working on login code and implementing it to server/client area.">
+      <option name="closed" value="true" />
+      <created>1772479857326</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1772479857326</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Made LoginService class static, will mak FriendService class static next">
+      <option name="closed" value="true" />
+      <created>1772492049013</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1772492049013</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Made FriendService static, make lists of all users created and all currently online users. will get started on making chats">
+      <option name="closed" value="true" />
+      <created>1772497945307</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1772497945307</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Started tweaking the login code on ClientHandler">
+      <option name="closed" value="true" />
+      <created>1772508074973</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1772508074973</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Started tweaking the login code on ClientHandler">
+      <option name="closed" value="true" />
+      <created>1772508512077</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1772508512077</updated>
+    </task>
+    <task id="LOCAL-00010" summary="saving progress">
+      <option name="closed" value="true" />
+      <created>1773075523931</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1773075523931</updated>
+    </task>
+    <task id="LOCAL-00011" summary="saving progress">
+      <option name="closed" value="true" />
+      <created>1773075677140</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1773075677140</updated>
+    </task>
+    <task id="LOCAL-00012" summary="working on client handling">
+      <option name="closed" value="true" />
+      <created>1773080483727</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1773080483727</updated>
+    </task>
+    <task id="LOCAL-00013" summary=" - Fix register parsing order (Fname Lname Username Password)&#10;  - Fix syntax error in ChatServer.registeredUsers reference&#10;  - Add reader thread to client for real-time server notifications&#10;  - Use semaphore to restore menu loop timing after responses">
+      <option name="closed" value="true" />
+      <created>1773153153158</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1773153153158</updated>
+    </task>
+    <task id="LOCAL-00014" summary="Added chat messaging system foundation        &#10;  - Message: data object (sender, content)    &#10;  - Conversation: stores members and message history&#10;  - MessageHandler: creates convos, stores messages, returns members&#10;  - usernames&#10;  - User: added conversationIds list">
+      <option name="closed" value="true" />
+      <created>1773237373701</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1773237373701</updated>
+    </task>
+    <task id="LOCAL-00015" summary="Added chat messaging system foundation        &#10;  - Message: data object (sender, content)    &#10;  - Conversation: stores members and message history&#10;  - MessageHandler: creates convos, stores messages, returns members&#10;  - usernames&#10;  - User: added conversationIds list">
+      <option name="closed" value="true" />
+      <created>1773237399447</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1773237399447</updated>
+    </task>
+    <task id="LOCAL-00016" summary="Working on MessageHandler">
+      <option name="closed" value="true" />
+      <created>1773239699611</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1773239699611</updated>
+    </task>
+    <task id="LOCAL-00017" summary="Added README.md">
+      <option name="closed" value="true" />
+      <created>1773242107124</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1773242107124</updated>
+    </task>
+    <task id="LOCAL-00018" summary="Add messaging system and improvements                                                                                                             &#10;  Messaging:                                                                                                                                        &#10;  - Add Conversation, Message, MessageHandler classes                                                                                               &#10;  - Add conversationIds to User                                                                                                                     &#10;  - Wire createchat and chat commands into ClientHandler&#10;&#10;  Friends:&#10;  - Offline friend requests now queue  silently&#10;  - Pending requests shown on login with count&#10;&#10;  Server:&#10;  - Move test users to ChatServer startup&#10;  - Clean up server console output&#10;&#10;  Misc:&#10;  - Rename send command to chat&#10;  - Add DEBUG.md&#10;  - Fix .gitignore to exclude .class and target/">
+      <option name="closed" value="true" />
+      <created>1773246605259</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1773246605259</updated>
+    </task>
+    <task id="LOCAL-00019" summary="Add friend management and chat restrictions                                                                                                       &#10;                                                                                                                                                  &#10;  - unfriend command                                                                                                                                &#10;  - Block duplicate friend requests&#10;  - createchat only works for friends only                                                                                                           &#10;  - Add mychats, history, accept, decline, users, friends commands&#10;  - Add server console commands: onlineusers, totalusers&#10;  - Update DEBUG.md">
+      <option name="closed" value="true" />
+      <created>1773248873957</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1773248873957</updated>
+    </task>
+    <task id="LOCAL-00020" summary="User can not register an account if another user is currently logged in.">
+      <option name="closed" value="true" />
+      <created>1773250059077</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1773250059077</updated>
+    </task>
+    <task id="LOCAL-00021" summary=" Polish and feature additions                                                                                                                      &#10;                                                                                                                                                    &#10;  - pendingrequests command                                                                                                                         &#10;  - addtochat command (friends only)&#10;  - whoami command                                                                                                                                  &#10;  - Block duplicate friend requests&#10;  - Block duplicate members in createchat&#10;  - Offline delivery notification when sending messages&#10;  - Notify user of new chats added while offline&#10;  - Fix register blocked when already logged in">
+      <option name="closed" value="true" />
+      <created>1773251017323</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1773251017323</updated>
+    </task>
+    <task id="LOCAL-00022" summary="Added profile class for each user to have.">
+      <option name="closed" value="true" />
+      <created>1773251940761</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1773251940761</updated>
+    </task>
+    <option name="localTasksCounter" value="23" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="master" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Backend Code" />
+    <MESSAGE value="Added backend code" />
+    <MESSAGE value="Added some of my backend code to ClientHandler" />
+    <MESSAGE value="Working on login code and implementing it to server/client area." />
+    <MESSAGE value="Made LoginService class static, will mak FriendService class static next" />
+    <MESSAGE value="Made FriendService static, make lists of all users created and all currently online users. will get started on making chats" />
+    <MESSAGE value="Started tweaking the login code on ClientHandler" />
+    <MESSAGE value="saving progress" />
+    <MESSAGE value="working on client handling" />
+    <MESSAGE value=" - Fix register parsing order (Fname Lname Username Password)&#10;  - Fix syntax error in ChatServer.registeredUsers reference&#10;  - Add reader thread to client for real-time server notifications&#10;  - Use semaphore to restore menu loop timing after responses" />
+    <MESSAGE value="Added chat messaging system foundation        &#10;  - Message: data object (sender, content)    &#10;  - Conversation: stores members and message history&#10;  - MessageHandler: creates convos, stores messages, returns members&#10;  - usernames&#10;  - User: added conversationIds list" />
+    <MESSAGE value="Working on MessageHandler" />
+    <MESSAGE value="Added README.md" />
+    <MESSAGE value="Add messaging system and improvements                                                                                                             &#10;  Messaging:                                                                                                                                        &#10;  - Add Conversation, Message, MessageHandler classes                                                                                               &#10;  - Add conversationIds to User                                                                                                                     &#10;  - Wire createchat and chat commands into ClientHandler&#10;&#10;  Friends:&#10;  - Offline friend requests now queue  silently&#10;  - Pending requests shown on login with count&#10;&#10;  Server:&#10;  - Move test users to ChatServer startup&#10;  - Clean up server console output&#10;&#10;  Misc:&#10;  - Rename send command to chat&#10;  - Add DEBUG.md&#10;  - Fix .gitignore to exclude .class and target/" />
+    <MESSAGE value="Add friend management and chat restrictions                                                                                                       &#10;                                                                                                                                                  &#10;  - unfriend command                                                                                                                                &#10;  - Block duplicate friend requests&#10;  - createchat only works for friends only                                                                                                           &#10;  - Add mychats, history, accept, decline, users, friends commands&#10;  - Add server console commands: onlineusers, totalusers&#10;  - Update DEBUG.md" />
+    <MESSAGE value="User can not register an account if another user is currently logged in." />
+    <MESSAGE value=" Polish and feature additions                                                                                                                      &#10;                                                                                                                                                    &#10;  - pendingrequests command                                                                                                                         &#10;  - addtochat command (friends only)&#10;  - whoami command                                                                                                                                  &#10;  - Block duplicate friend requests&#10;  - Block duplicate members in createchat&#10;  - Offline delivery notification when sending messages&#10;  - Notify user of new chats added while offline&#10;  - Fix register blocked when already logged in" />
+    <MESSAGE value="Added profile class for each user to have." />
+    <option name="LAST_COMMIT_MESSAGE" value="Added profile class for each user to have." />
+  </component>
+</project>

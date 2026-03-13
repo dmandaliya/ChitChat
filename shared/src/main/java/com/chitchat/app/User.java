@@ -18,7 +18,9 @@ public class User {
     private boolean newAccount = true; // Default true until values are chosen.
     private boolean loggedIn = false;
     private List<Integer> conversationIds = new ArrayList<>();
+    private List<Integer> pendingChatNotifications = new ArrayList<>();
     private Profile profile = new Profile();
+    private List<User> blockedUsers = new ArrayList<>();
 
     public User() {
         // For initializing a user with all empty values.
@@ -117,6 +119,12 @@ public class User {
         this.preference = preference;
     }
 
+    // -------- Block list --------
+    public List<User> getBlockedUsers() { return blockedUsers; }
+    public void blockUser(User u) { blockedUsers.add(u); }
+    public void unblockUser(User u) { blockedUsers.remove(u); }
+    public boolean hasBlocked(User u) { return blockedUsers.contains(u); }
+
     // -------- Get profile --------
     public Profile getProfile() { return profile; }
     public void setProfile(Profile profile) { this.profile = profile; }
@@ -124,6 +132,11 @@ public class User {
     // -------- Get/Add conversationIds --------
     public List<Integer> getConversationIds() { return conversationIds; }
     public void addConversationId(int id) { conversationIds.add(id); }
+
+    // -------- Pending chat notifications (shown once on next login) --------
+    public List<Integer> getPendingChatNotifications() { return pendingChatNotifications; }
+    public void addPendingChatNotification(int id) { pendingChatNotifications.add(id); }
+    public void clearPendingChatNotifications() { pendingChatNotifications.clear(); }
 
     public void printList(User u) {
         System.out.print("Friends: ");

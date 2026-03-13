@@ -15,7 +15,14 @@
 | friends | `friends` | List your friends |
 | pendingrequests | `pendingrequests` | List incoming friend requests |
 | users | `users` | List online users |
+| profile | `profile` or `profile <username>` | View your own or another user's profile |
+| setbio | `setbio <text>` | Set your bio |
+| setstatus | `setstatus <text>` | Set your status |
+| block | `block <username>` | Block a user (unfriends them, prevents all contact) |
+| unblock | `unblock <username>` | Unblock a user |
+| blocklist | `blocklist` | See who you have blocked |
 | createchat | `createchat user1 user2 ...` | Create a group chat (friends only) |
+| leavechat | `leavechat <convo_id>` | Leave a conversation |
 | addtochat | `addtochat <convo_id> <username>` | Add a friend to an existing chat |
 | mychats | `mychats` | List your conversations |
 | history | `history <convo_id>` | View message history for a conversation |

@@ -12,7 +12,7 @@ import com.chitchat.app.Message;
 import com.chitchat.app.MessageHandler;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ClientHandler implements Runnable {
 
@@ -30,6 +30,34 @@ public class ClientHandler implements Runnable {
     // Called by another handler to deliver a message to this client
     public void sendMessage(String message) {
         if (out != null) out.println(message);
+    }
+
+    // Add this handler to the connected clients map for the given username
+    private static void addConnectedClient(String username, ClientHandler handler) {
+        ChatServer.connectedClients.computeIfAbsent(username, k -> new CopyOnWriteArrayList<>()).add(handler);
+    }
+
+    // Remove this handler from the connected clients map; removes the key if no handlers remain
+    private static void removeConnectedClient(String username, ClientHandler handler) {
+        List<ClientHandler> handlers = ChatServer.connectedClients.get(username);
+        if (handlers != null) {
+            handlers.remove(handler);
+            if (handlers.isEmpty()) ChatServer.connectedClients.remove(username);
+        }
+    }
+
+    // Send a message to all active sessions of a user
+    private static void deliverToUser(String username, String message) {
+        List<ClientHandler> handlers = ChatServer.connectedClients.get(username);
+        if (handlers != null) {
+            for (ClientHandler h : handlers) h.sendMessage(message);
+        }
+    }
+
+    // Check if a user has any active sessions
+    private static boolean isOnline(String username) {
+        List<ClientHandler> handlers = ChatServer.connectedClients.get(username);
+        return handlers != null && !handlers.isEmpty();
     }
 
     @Override
@@ -98,8 +126,32 @@ public class ClientHandler implements Runnable {
                 } else if (line.equals("whoami")) {
                     handleWhoAmI();
 
+                } else if (line.equals("profile") || line.startsWith("profile ")) {
+                    handleProfile(line);
+
+                } else if (line.startsWith("setbio ")) {
+                    handleSetBio(line.substring(7).trim());
+
+                } else if (line.startsWith("setstatus ")) {
+                    handleSetStatus(line.substring(10).trim());
+
+                } else if (line.startsWith("leavechat ")) {
+                    handleLeaveChat(line);
+
+                } else if (line.startsWith("block ")) {
+                    handleBlock(line.substring(6).trim());
+
+                } else if (line.startsWith("unblock ")) {
+                    handleUnblock(line.substring(8).trim());
+
+                } else if (line.equals("blocklist")) {
+                    handleBlockList();
+
+                } else if (line.equals("help")) {
+                    handleHelp();
+
                 } else {
-                    out.println("RECEIVED: " + line);
+                    out.println("Unknown command. Type 'help' for a list of commands.");
                 }
                 out.println("END"); // signals to client that this response is complete
             }
@@ -108,7 +160,7 @@ public class ClientHandler implements Runnable {
             System.out.println("Client disconnected: " + socket);
         } finally {
             if (login.isLoggedIn()) {
-                ChatServer.connectedClients.remove(user.getUsername());
+                removeConnectedClient(user.getUsername(), this);
                 login.logout();
             }
             try { socket.close(); } catch (IOException ignored) {}
@@ -136,6 +188,19 @@ public class ClientHandler implements Runnable {
             return;
         }
 
+        // Password validation — collect all failures and report at once
+        List<String> pwErrors = new ArrayList<>();
+        if (password.length() < 8)
+            pwErrors.add("at least 8 characters");
+        if (!password.chars().anyMatch(Character::isUpperCase))
+            pwErrors.add("at least one uppercase letter");
+        if (!password.chars().anyMatch(c -> !Character.isLetterOrDigit(c)))
+            pwErrors.add("at least one symbol");
+        if (!pwErrors.isEmpty()) {
+            out.println("Password must have: " + String.join(", ", pwErrors) + ".");
+            return;
+        }
+
         // Build and store the new user
         User newUser = new User(fname, lname);
         newUser.setUsername(username);
@@ -147,8 +212,6 @@ public class ClientHandler implements Runnable {
         out.println("New user created.");
         out.println("Name: " + fname + " " + lname);
         out.println("Username: " + username);
-        out.println("Password: " + password);
-        out.println("Hashed Password: " + newUser.getHashedPassword());
 
         // Auto-login after register
         loginUser(newUser);
@@ -193,12 +256,12 @@ public class ClientHandler implements Runnable {
         friend = new FriendService(user);
         login = new LoginService(user);
         login.login(); // updates LoginService state (currentUser), prints to server console
-        ChatServer.connectedClients.put(user.getUsername(), this);
+        addConnectedClient(user.getUsername(), this);
 
         // Notify user of anything that happened while offline
         List<User> pending = user.getPendingRequests();
-        List<Integer> convos = user.getConversationIds();
-        if (!pending.isEmpty() || !convos.isEmpty()) {
+        List<Integer> newChats = user.getPendingChatNotifications();
+        if (!pending.isEmpty() || !newChats.isEmpty()) {
             out.println("While you were offline:");
             if (!pending.isEmpty()) {
                 out.println("Friend requests: " + pending.size());
@@ -206,10 +269,11 @@ public class ClientHandler implements Runnable {
                     out.println("  - " + requester.getUsername() + " sent you a friend request.");
                 }
             }
-            if (!convos.isEmpty()) {
-                out.println("You were added to " + convos.size() + " chat(s): " + convos);
+            if (!newChats.isEmpty()) {
+                out.println("You were added to " + newChats.size() + " new chat(s): " + newChats);
             }
         }
+        user.clearPendingChatNotifications();
     }
 
     private void handleLogout() {
@@ -219,7 +283,7 @@ public class ClientHandler implements Runnable {
         }
 
         String username = user.getUsername();
-        ChatServer.connectedClients.remove(username);
+        removeConnectedClient(username, this);
         login.logout(); // updates LoginService state (currentUser = empty), prints to server console
         printServerStatus();
 
@@ -251,6 +315,16 @@ public class ClientHandler implements Runnable {
             return;
         }
 
+        // Block checks
+        if (user.hasBlocked(targetUser)) {
+            out.println("You have blocked " + targetUsername + ". Unblock them first.");
+            return;
+        }
+        if (targetUser.hasBlocked(user)) {
+            out.println("You cannot send a friend request to " + targetUsername + ".");
+            return;
+        }
+
         // Already friends check
         if (user.getFriendList().contains(targetUser)) {
             out.println("You are already friends with " + targetUsername + ".");
@@ -263,13 +337,12 @@ public class ClientHandler implements Runnable {
             return;
         }
 
-        ClientHandler targetHandler = ChatServer.connectedClients.get(targetUsername);
-
         // If target already sent us a request, accept it — mutual add via FriendService
         if (user.getPendingRequests().contains(targetUser)) {
-            if (targetHandler != null) {
-                targetHandler.friend.acceptRequest(user);
-                targetHandler.sendMessage("You and " + myUsername + " are now friends!");
+            if (isOnline(targetUsername)) {
+                // Use first session to call acceptRequest, then notify all sessions
+                ChatServer.connectedClients.get(targetUsername).get(0).friend.acceptRequest(user);
+                deliverToUser(targetUsername, "You and " + myUsername + " are now friends!");
             } else {
                 // Accept locally — target will see it when they log in
                 friend.acceptRequest(targetUser);
@@ -278,8 +351,8 @@ public class ClientHandler implements Runnable {
         } else {
             // Queue the request on the target user
             friend.addFriend(targetUser);
-            if (targetHandler != null) {
-                targetHandler.sendMessage(myUsername + " has sent you a friend request.");
+            if (isOnline(targetUsername)) {
+                deliverToUser(targetUsername, myUsername + " has sent you a friend request.");
             }
             System.out.println(myUsername + " sent a friend request to " + targetUsername);
             out.println("Friend request sent to " + targetUsername + ".");
@@ -328,6 +401,12 @@ public class ClientHandler implements Runnable {
         if (convo != null) {
             out.println("Chat created! Conversation ID: " + convo.getId());
             System.out.println("New Chat Created | ID: " + convo.getId() + " | Members: " + MessageHandler.getMembers(convo.getId()));
+            // Queue notification for offline members
+            for (User member : members) {
+                if (!member.getUsername().equals(user.getUsername()) && !isOnline(member.getUsername())) {
+                    member.addPendingChatNotification(convo.getId());
+                }
+            }
         }
     }
 
@@ -359,13 +438,14 @@ public class ClientHandler implements Runnable {
             return;
         }
 
-        // Deliver to all members in the conversation
+        // Deliver to all members in the conversation (skip blocked users)
         String formatted = "[" + user.getUsername() + "]: " + content;
         List<String> offline = new ArrayList<>();
         for (String username : MessageHandler.getMembers(convoId)) {
-            ClientHandler handler = ChatServer.connectedClients.get(username);
-            if (handler != null) {
-                handler.sendMessage(formatted);
+            User member = ChatServer.registeredUsers.get(username);
+            if (member != null && (member.hasBlocked(user) || user.hasBlocked(member))) continue;
+            if (isOnline(username)) {
+                deliverToUser(username, formatted);
             } else if (!username.equals(user.getUsername())) {
                 offline.add(username);
             }
@@ -442,10 +522,7 @@ public class ClientHandler implements Runnable {
         }
         friend.acceptRequest(targetUser);
         out.println("You and " + targetUsername + " are now friends!");
-        ClientHandler targetHandler = ChatServer.connectedClients.get(targetUsername);
-        if (targetHandler != null) {
-            targetHandler.sendMessage("You and " + user.getUsername() + " are now friends!");
-        }
+        deliverToUser(targetUsername, "You and " + user.getUsername() + " are now friends!");
     }
 
     // decline <username>
@@ -494,10 +571,7 @@ public class ClientHandler implements Runnable {
         friend.removeFriend(targetUser);
         targetUser.getFriendList().remove(user);
         out.println("You unfriended " + targetUsername + ".");
-        ClientHandler targetHandler = ChatServer.connectedClients.get(targetUsername);
-        if (targetHandler != null) {
-            targetHandler.sendMessage(user.getUsername() + " unfriended you.");
-        }
+        deliverToUser(targetUsername, user.getUsername() + " unfriended you.");
     }
 
     // friends
@@ -569,9 +643,10 @@ public class ClientHandler implements Runnable {
         convo.addMember(target);
         target.addConversationId(convoId);
         out.println(targetUsername + " added to chat " + convoId + ".");
-        ClientHandler targetHandler = ChatServer.connectedClients.get(targetUsername);
-        if (targetHandler != null) {
-            targetHandler.sendMessage(user.getUsername() + " added you to chat " + convoId + ".");
+        if (isOnline(targetUsername)) {
+            deliverToUser(targetUsername, user.getUsername() + " added you to chat " + convoId + ".");
+        } else {
+            target.addPendingChatNotification(convoId);
         }
         System.out.println(user.getUsername() + " added " + targetUsername + " to chat " + convoId);
     }
@@ -583,6 +658,175 @@ public class ClientHandler implements Runnable {
             return;
         }
         out.println("Logged in as: " + user.getUsername());
+    }
+
+    // profile [username]
+    private void handleProfile(String line) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        String[] parts = line.split(" ", 2);
+        User target = parts.length > 1 ? ChatServer.registeredUsers.get(parts[1].trim()) : user;
+        if (target == null) {
+            out.println("User not found.");
+            return;
+        }
+        if (target.hasBlocked(user)) {
+            out.println("User not found.");
+            return;
+        }
+        out.println("--- Profile: " + target.getUsername() + " ---");
+        out.println("Name:   " + target.getFname() + " " + target.getLname());
+        out.println("Bio:    " + (target.getProfile().getBio().isEmpty() ? "(none)" : target.getProfile().getBio()));
+        out.println("Status: " + target.getProfile().getStatus());
+    }
+
+    // setbio <text>
+    private void handleSetBio(String bio) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        user.getProfile().setBio(bio);
+        out.println("Bio updated.");
+    }
+
+    // setstatus <text>
+    private void handleSetStatus(String status) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        user.getProfile().setStatus(status);
+        out.println("Status updated.");
+    }
+
+    // leavechat <convo_id>
+    private void handleLeaveChat(String line) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        String[] parts = line.split(" ");
+        if (parts.length < 2) {
+            out.println("Usage: leavechat <convo_id>");
+            return;
+        }
+        int convoId;
+        try {
+            convoId = Integer.parseInt(parts[1]);
+        } catch (NumberFormatException e) {
+            out.println("Invalid conversation ID.");
+            return;
+        }
+        Conversation convo = MessageHandler.getConversation(convoId);
+        if (convo == null || !convo.hasMember(user.getUsername())) {
+            out.println("Conversation not found or you are not a member.");
+            return;
+        }
+        convo.getMembers().remove(user);
+        user.getConversationIds().remove(Integer.valueOf(convoId));
+        out.println("You left chat " + convoId + ".");
+        // Notify remaining members
+        String formatted = user.getUsername() + " has left the chat.";
+        for (String username : MessageHandler.getMembers(convoId)) {
+            deliverToUser(username, formatted);
+        }
+    }
+
+    // block <username>
+    private void handleBlock(String targetUsername) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        if (targetUsername.equals(user.getUsername())) {
+            out.println("You can't block yourself.");
+            return;
+        }
+        User targetUser = ChatServer.registeredUsers.get(targetUsername);
+        if (targetUser == null) {
+            out.println("User does not exist.");
+            return;
+        }
+        if (user.hasBlocked(targetUser)) {
+            out.println("You have already blocked " + targetUsername + ".");
+            return;
+        }
+        // Unfriend both sides
+        user.getFriendList().remove(targetUser);
+        targetUser.getFriendList().remove(user);
+        // Remove pending requests both ways
+        user.removePendingRequest(targetUser);
+        targetUser.removePendingRequest(user);
+        // Block
+        user.blockUser(targetUser);
+        out.println("Blocked " + targetUsername + ". They have been unfriended.");
+    }
+
+    // unblock <username>
+    private void handleUnblock(String targetUsername) {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        User targetUser = ChatServer.registeredUsers.get(targetUsername);
+        if (targetUser == null) {
+            out.println("User does not exist.");
+            return;
+        }
+        if (!user.hasBlocked(targetUser)) {
+            out.println("You have not blocked " + targetUsername + ".");
+            return;
+        }
+        user.unblockUser(targetUser);
+        out.println("Unblocked " + targetUsername + ".");
+    }
+
+    // blocklist
+    private void handleBlockList() {
+        if (!login.isLoggedIn()) {
+            out.println("You must be logged in.");
+            return;
+        }
+        List<User> blocked = user.getBlockedUsers();
+        if (blocked.isEmpty()) {
+            out.println("Your block list is empty.");
+            return;
+        }
+        List<String> names = new ArrayList<>();
+        for (User u : blocked) names.add(u.getUsername());
+        out.println("Blocked users: " + String.join(", ", names));
+    }
+
+    // help
+    private void handleHelp() {
+        out.println("--- Available Commands ---");
+        out.println("register <fname> <lname> <username> <password>");
+        out.println("login <username> <password>");
+        out.println("logout");
+        out.println("whoami");
+        out.println("profile [username]");
+        out.println("setbio <text>");
+        out.println("setstatus <text>");
+        out.println("friend <username>");
+        out.println("unfriend <username>");
+        out.println("accept <username>");
+        out.println("decline <username>");
+        out.println("friends");
+        out.println("pendingrequests");
+        out.println("block <username>");
+        out.println("unblock <username>");
+        out.println("blocklist");
+        out.println("users");
+        out.println("createchat <user1> <user2> ...");
+        out.println("addtochat <convo_id> <username>");
+        out.println("leavechat <convo_id>");
+        out.println("mychats");
+        out.println("history <convo_id>");
+        out.println("chat <convo_id> <message>");
+        out.println("help");
     }
 
     private void printServerStatus() {

@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import com.chitchat.app.User;
@@ -15,8 +17,8 @@ public class ChatServer {
     private static final int PORT = 5050;
     private static final ExecutorService pool = Executors.newCachedThreadPool();
 
-    // Maps username -> their ClientHandler so handlers can reach each other
-    public static final ConcurrentHashMap<String, ClientHandler> connectedClients = new ConcurrentHashMap<>();
+    // Maps username -> all their active ClientHandlers (supports multiple sessions per account)
+    public static final ConcurrentHashMap<String, List<ClientHandler>> connectedClients = new ConcurrentHashMap<>();
 
     // Persistent registry of all created accounts (username -> User)
     public static final ConcurrentHashMap<String, com.chitchat.app.User> registeredUsers = new ConcurrentHashMap<>();
