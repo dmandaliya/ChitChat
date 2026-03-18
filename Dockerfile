@@ -3,6 +3,7 @@ WORKDIR /app
 COPY pom.xml .
 COPY shared/pom.xml shared/
 COPY server/pom.xml server/
+COPY client/pom.xml client/
 COPY shared/src shared/src
 COPY server/src server/src
 RUN mvn -pl shared,server package -DskipTests
