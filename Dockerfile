@@ -12,6 +12,4 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=build /app/server/target/server-1.0-SNAPSHOT.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar", \
-  "--spring.profiles.active=prod", \
-  "--spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver"]
+ENTRYPOINT ["java", "-jar", "app.jar", "--spring.profiles.active=prod"]
