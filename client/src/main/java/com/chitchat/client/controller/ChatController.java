@@ -27,6 +27,7 @@ public class ChatController implements Initializable {
     @FXML private Label userInfoLabel;
     @FXML private Label chatHeaderLabel;
     @FXML private ListView<String> userListView;
+    @FXML private ListView<String> roomListView;
     @FXML private VBox messagesBox;
     @FXML private ScrollPane messagesScroll;
     @FXML private TextField messageInput;
@@ -127,6 +128,46 @@ public class ChatController implements Initializable {
         for (String u : csv.split(",")) {
             if (!u.isBlank()) userListView.getItems().add(u.trim());
         }
+    }
+
+    @FXML
+    private void handleProfile() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/profile.fxml"));
+            Scene scene = new Scene(loader.load(), 440, 580);
+            scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
+            Stage profileStage = new Stage();
+            profileStage.setTitle("My Profile");
+            profileStage.setScene(scene);
+            profileStage.setResizable(false);
+            profileStage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void handleAddFriend() {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Add Friend");
+        dialog.setHeaderText("Add a friend by username");
+        dialog.setContentText("Username:");
+        dialog.showAndWait().ifPresent(username -> {
+            // TODO: Ayden — call POST /api/friends/add with {username}
+            System.out.println("Add friend: " + username);
+        });
+    }
+
+    @FXML
+    private void handleCreateRoom() {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("New Group Room");
+        dialog.setHeaderText("Create a group chat room");
+        dialog.setContentText("Room name:");
+        dialog.showAndWait().ifPresent(roomName -> {
+            // TODO: Ayden — call POST /api/rooms with {name}
+            System.out.println("Create room: " + roomName);
+        });
     }
 
     @FXML

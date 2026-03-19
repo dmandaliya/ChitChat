@@ -3,44 +3,63 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.shape.Circle?>
 
 <HBox xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.chitchat.client.controller.ChatController"
       styleClass="chat-root">
 
   <!-- Sidebar -->
-  <VBox styleClass="sidebar" prefWidth="220" minWidth="180">
+  <VBox styleClass="sidebar" prefWidth="230" minWidth="190">
 
+    <!-- Header -->
     <HBox styleClass="sidebar-header" alignment="CENTER_LEFT" spacing="8">
       <Label text="ChitChat" styleClass="brand-small"/>
       <Region HBox.hgrow="ALWAYS"/>
+      <Button text="&#x1F464;" onAction="#handleProfile" styleClass="btn-logout" tooltip="Profile"/>
       <Button text="&#x2715;" onAction="#handleLogout" styleClass="btn-logout" tooltip="Logout"/>
     </HBox>
 
-    <Label fx:id="userInfoLabel" styleClass="user-info-label" wrapText="true">
-      <padding><Insets top="8" right="10" bottom="8" left="10"/></padding>
-    </Label>
+    <!-- Logged-in user info -->
+    <Label fx:id="userInfoLabel" styleClass="user-info-label" wrapText="true"/>
 
-    <Label text="ONLINE USERS" styleClass="section-title">
+    <!-- Friends section header -->
+    <HBox alignment="CENTER_LEFT" spacing="6">
       <padding><Insets top="10" right="10" bottom="4" left="10"/></padding>
-    </Label>
+      <Label text="FRIENDS" styleClass="section-title" HBox.hgrow="ALWAYS"/>
+      <Button text="+ Add" styleClass="btn-add-friend" onAction="#handleAddFriend"/>
+    </HBox>
 
+    <!-- Friends list -->
     <ListView fx:id="userListView" styleClass="user-list" VBox.vgrow="ALWAYS"/>
+
+    <!-- Group Rooms section -->
+    <HBox alignment="CENTER_LEFT" spacing="6">
+      <padding><Insets top="8" right="10" bottom="4" left="10"/></padding>
+      <Label text="GROUP ROOMS" styleClass="section-title" HBox.hgrow="ALWAYS"/>
+      <Button text="+ New" styleClass="btn-add-friend" onAction="#handleCreateRoom"/>
+    </HBox>
+
+    <!-- Rooms list -->
+    <ListView fx:id="roomListView" styleClass="user-list" prefHeight="120"/>
 
   </VBox>
 
   <!-- Main Chat -->
   <VBox HBox.hgrow="ALWAYS" styleClass="chat-main">
 
+    <!-- Chat header -->
     <Label fx:id="chatHeaderLabel" text="Public Chat" styleClass="chat-header"/>
 
+    <!-- Messages -->
     <ScrollPane fx:id="messagesScroll" VBox.vgrow="ALWAYS" fitToWidth="true"
                 styleClass="messages-scroll" hbarPolicy="NEVER">
       <VBox fx:id="messagesBox" styleClass="messages-box" spacing="4">
-        <padding><Insets top="10" right="0" bottom="10" left="0"/></padding>
+        <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
       </VBox>
     </ScrollPane>
 
+    <!-- Input bar -->
     <HBox styleClass="message-bar" spacing="10" alignment="CENTER">
       <padding><Insets top="10" right="16" bottom="10" left="16"/></padding>
       <TextField fx:id="messageInput" promptText="Type a message..."

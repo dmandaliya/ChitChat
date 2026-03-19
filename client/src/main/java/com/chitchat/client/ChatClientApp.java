@@ -19,6 +19,8 @@ public class ChatClientApp extends Application {
         stage.setTitle("ChitChat");
         stage.setScene(scene);
         stage.setResizable(false);
+        stage.setMinWidth(440);
+        stage.setMinHeight(580);
         stage.show();
     }
 

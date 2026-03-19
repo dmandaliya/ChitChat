@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.geometry.Insets?>
+
+<StackPane xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.chitchat.client.controller.ProfileController"
+           styleClass="auth-root">
+
+  <VBox alignment="CENTER" spacing="0" maxWidth="400">
+    <padding><Insets top="30" right="30" bottom="30" left="30"/></padding>
+
+    <!-- Card -->
+    <VBox styleClass="auth-card" spacing="0">
+
+      <!-- Header bar -->
+      <HBox styleClass="profile-header" alignment="CENTER_LEFT" spacing="10">
+        <padding><Insets top="14" right="16" bottom="14" left="16"/></padding>
+        <Label text="My Profile" styleClass="profile-title" HBox.hgrow="ALWAYS"/>
+        <Button text="&#x2715;" onAction="#handleClose" styleClass="btn-logout"/>
+      </HBox>
+
+      <VBox spacing="16">
+        <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
+
+        <!-- Avatar circle with initials -->
+        <StackPane alignment="CENTER">
+          <Circle fx:id="avatarCircle" radius="44" styleClass="avatar-circle"/>
+          <Label fx:id="avatarInitials" styleClass="avatar-initials"/>
+        </StackPane>
+
+        <!-- Name display -->
+        <Label fx:id="fullNameLabel" styleClass="profile-name" wrapText="true">
+          <padding><Insets top="0" right="0" bottom="0" left="0"/></padding>
+        </Label>
+        <Label fx:id="usernameLabel" styleClass="profile-username"/>
+
+        <Separator/>
+
+        <!-- Status -->
+        <VBox spacing="6">
+          <Label text="Status" styleClass="profile-field-label"/>
+          <ComboBox fx:id="statusCombo" maxWidth="Infinity" styleClass="auth-input"/>
+        </VBox>
+
+        <!-- Bio -->
+        <VBox spacing="6">
+          <Label text="Bio" styleClass="profile-field-label"/>
+          <TextArea fx:id="bioArea" promptText="Tell people about yourself..."
+                    styleClass="profile-bio" wrapText="true" prefRowCount="3"/>
+        </VBox>
+
+        <!-- Save button -->
+        <Button text="Save Profile" onAction="#handleSave"
+                styleClass="btn-primary" maxWidth="Infinity"/>
+
+        <Label fx:id="profileMsg" styleClass="profile-msg" wrapText="true"/>
+
+      </VBox>
+    </VBox>
+  </VBox>
+
+</StackPane>

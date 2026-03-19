@@ -2,152 +2,292 @@
 .root { -fx-font-family: 'Segoe UI', system; -fx-font-size: 13px; }
 
 /* ===== Auth Screen ===== */
-.auth-root { -fx-background-color: linear-gradient(to bottom right, #4f46e5, #7c3aed); }
+/* Warm gradient: Lemon → Rose */
+.auth-root {
+  -fx-background-color: linear-gradient(to bottom right, #fff685, #ffb3c1);
+}
 
 .brand-title {
-  -fx-font-size: 32px;
+  -fx-font-size: 36px;
   -fx-font-weight: bold;
-  -fx-text-fill: #4f46e5;
+  -fx-text-fill: #1c1c1c;
   -fx-padding: 0 0 4 0;
 }
 
 .brand-sub {
   -fx-font-size: 12px;
-  -fx-text-fill: #64748b;
+  -fx-text-fill: #1c1c1c;
   -fx-padding: 0 0 16 0;
+}
+
+.auth-card {
+  -fx-background-color: white;
+  -fx-background-radius: 16;
+  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 28, 0, 0, 8);
 }
 
 .auth-tabs {
   -fx-background-color: white;
-  -fx-background-radius: 12;
-  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.20), 24, 0, 0, 6);
+  -fx-background-radius: 16;
 }
 
 .auth-form { -fx-padding: 0; }
 
+.auth-hint {
+  -fx-font-size: 11px;
+  -fx-text-fill: #bdbdbd;
+  -fx-alignment: center;
+}
+
 .auth-input {
   -fx-background-radius: 8;
   -fx-border-radius: 8;
-  -fx-border-color: #e2e8f0;
-  -fx-border-width: 1;
+  -fx-border-color: #e8f1f2;
+  -fx-border-width: 1.5;
   -fx-padding: 9 12;
+  -fx-background-color: #e8f1f2;
+  -fx-text-fill: #1c1c1c;
+}
+.auth-input:focused {
+  -fx-border-color: #ffb3c1;
   -fx-background-color: white;
 }
-.auth-input:focused { -fx-border-color: #4f46e5; }
 
-.error-label { -fx-text-fill: #ef4444; -fx-font-size: 11px; }
+.error-label { -fx-text-fill: #ff6b6b; -fx-font-size: 11px; }
 
 .btn-primary {
-  -fx-background-color: #4f46e5;
-  -fx-text-fill: white;
+  -fx-background-color: #1c1c1c;
+  -fx-text-fill: #fff685;
   -fx-font-weight: bold;
   -fx-background-radius: 8;
   -fx-padding: 10 0;
   -fx-cursor: hand;
 }
-.btn-primary:hover { -fx-background-color: #3730a3; }
+.btn-primary:hover { -fx-background-color: #333333; }
+
+/* ===== Profile Screen ===== */
+.profile-header {
+  -fx-background-color: #1c1c1c;
+  -fx-background-radius: 16 16 0 0;
+}
+
+.profile-title {
+  -fx-font-size: 16px;
+  -fx-font-weight: bold;
+  -fx-text-fill: #fff685;
+}
+
+.avatar-circle {
+  -fx-fill: #fff685;
+  -fx-stroke: #ffb3c1;
+  -fx-stroke-width: 3;
+}
+
+.avatar-initials {
+  -fx-font-size: 28px;
+  -fx-font-weight: bold;
+  -fx-text-fill: #1c1c1c;
+}
+
+.profile-name {
+  -fx-font-size: 18px;
+  -fx-font-weight: bold;
+  -fx-text-fill: #1c1c1c;
+  -fx-alignment: center;
+}
+
+.profile-username {
+  -fx-font-size: 12px;
+  -fx-text-fill: #bdbdbd;
+  -fx-alignment: center;
+}
+
+.profile-field-label {
+  -fx-font-size: 11px;
+  -fx-font-weight: bold;
+  -fx-text-fill: #bdbdbd;
+}
+
+.profile-bio {
+  -fx-background-radius: 8;
+  -fx-border-radius: 8;
+  -fx-border-color: #e8f1f2;
+  -fx-border-width: 1.5;
+  -fx-padding: 8 12;
+  -fx-background-color: #e8f1f2;
+  -fx-text-fill: #1c1c1c;
+  -fx-font-size: 13px;
+}
+.profile-bio:focused {
+  -fx-border-color: #ffb3c1;
+  -fx-background-color: white;
+}
+
+.profile-msg {
+  -fx-font-size: 11px;
+  -fx-alignment: center;
+}
 
 /* ===== Chat Screen ===== */
-.chat-root { -fx-background-color: #f0f2f5; }
+.chat-root { -fx-background-color: #e8f1f2; }
 
+/* ===== Sidebar ===== */
 .sidebar {
-  -fx-background-color: white;
-  -fx-border-color: #e2e8f0;
-  -fx-border-width: 0 1 0 0;
+  -fx-background-color: #1c1c1c;
+  -fx-border-color: transparent;
 }
 
 .sidebar-header {
-  -fx-padding: 14 12;
-  -fx-border-color: #e2e8f0;
+  -fx-padding: 16 14;
+  -fx-background-color: #1c1c1c;
+  -fx-border-color: #333333;
   -fx-border-width: 0 0 1 0;
-  -fx-background-color: white;
 }
 
-.brand-small { -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #4f46e5; }
+.brand-small {
+  -fx-font-size: 20px;
+  -fx-font-weight: bold;
+  -fx-text-fill: #fff685;
+}
 
 .btn-logout {
   -fx-background-color: transparent;
-  -fx-text-fill: #94a3b8;
+  -fx-text-fill: #bdbdbd;
   -fx-border-color: transparent;
   -fx-padding: 3 8;
   -fx-cursor: hand;
   -fx-background-radius: 6;
 }
-.btn-logout:hover { -fx-background-color: #fef2f2; -fx-text-fill: #ef4444; }
+.btn-logout:hover { -fx-background-color: #333333; -fx-text-fill: #ffb3c1; }
 
-.user-info-label { -fx-text-fill: #64748b; -fx-font-size: 11px; }
+.user-info-label {
+  -fx-text-fill: #bdbdbd;
+  -fx-font-size: 11px;
+  -fx-background-color: #1c1c1c;
+  -fx-padding: 8 14;
+}
 
 .section-title {
   -fx-font-size: 10px;
   -fx-font-weight: bold;
-  -fx-text-fill: #94a3b8;
+  -fx-text-fill: #bdbdbd;
+  -fx-padding: 10 14 4 14;
 }
 
+/* ===== Friend / Room List ===== */
 .user-list { -fx-background-color: transparent; -fx-border-color: transparent; }
 .user-list .list-cell {
   -fx-background-color: transparent;
-  -fx-padding: 7 12;
+  -fx-padding: 8 14;
   -fx-cursor: hand;
+  -fx-text-fill: #e8f1f2;
 }
-.user-list .list-cell:hover { -fx-background-color: #f1f5f9; -fx-background-radius: 8; }
-.user-list .list-cell:selected { -fx-background-color: #ede9fe; -fx-text-fill: #4f46e5; -fx-font-weight: bold; -fx-background-radius: 8; }
+.user-list .list-cell:hover {
+  -fx-background-color: #2a2a2a;
+  -fx-background-radius: 8;
+}
+.user-list .list-cell:selected {
+  -fx-background-color: #fff685;
+  -fx-text-fill: #1c1c1c;
+  -fx-font-weight: bold;
+  -fx-background-radius: 8;
+}
 
-.chat-main { -fx-background-color: #f0f2f5; }
+/* Online dots */
+.dot-online  { -fx-fill: #ffb3c1; }
+.dot-offline { -fx-fill: #444444; }
+
+/* Add friend / new room button */
+.btn-add-friend {
+  -fx-background-color: #fff685;
+  -fx-text-fill: #1c1c1c;
+  -fx-font-weight: bold;
+  -fx-background-radius: 6;
+  -fx-padding: 3 8;
+  -fx-cursor: hand;
+  -fx-font-size: 11px;
+}
+.btn-add-friend:hover { -fx-background-color: #f5dd00; }
+
+/* ===== Main Chat Area ===== */
+.chat-main { -fx-background-color: #e8f1f2; }
 
 .chat-header {
   -fx-padding: 14 20;
   -fx-font-weight: bold;
   -fx-font-size: 14px;
+  -fx-text-fill: #1c1c1c;
   -fx-background-color: white;
-  -fx-border-color: #e2e8f0;
+  -fx-border-color: #bdbdbd;
   -fx-border-width: 0 0 1 0;
 }
 
-.messages-scroll { -fx-background-color: transparent; -fx-background: transparent; -fx-padding: 0; }
+.messages-scroll { -fx-background-color: transparent; -fx-background: transparent; }
 .messages-scroll > .viewport { -fx-background-color: transparent; }
 .messages-box { -fx-background-color: transparent; }
 
-.msg-sender { -fx-font-size: 10px; -fx-text-fill: #94a3b8; -fx-padding: 0 6; }
-.msg-system { -fx-text-fill: #94a3b8; -fx-font-size: 11px; -fx-font-style: italic; -fx-padding: 4 12; }
+/* ===== Message Bubbles ===== */
+.msg-sender { -fx-font-size: 10px; -fx-text-fill: #bdbdbd; -fx-padding: 0 6; }
+.msg-system {
+  -fx-text-fill: #bdbdbd;
+  -fx-font-size: 11px;
+  -fx-font-style: italic;
+  -fx-padding: 4 12;
+}
 
 .msg-bubble {
-  -fx-padding: 8 13;
+  -fx-padding: 9 14;
   -fx-background-radius: 18;
   -fx-max-width: 380;
   -fx-wrap-text: true;
 }
 .msg-mine {
-  -fx-background-color: #4f46e5;
-  -fx-text-fill: white;
+  -fx-background-color: #1c1c1c;
+  -fx-text-fill: #fff685;
 }
 .msg-theirs {
-  -fx-background-color: #e2e8f0;
-  -fx-text-fill: #1e293b;
+  -fx-background-color: white;
+  -fx-text-fill: #1c1c1c;
 }
-.msg-private { -fx-background-color: #fef3c7; -fx-text-fill: #92400e; }
+.msg-private {
+  -fx-background-color: #ffb3c1;
+  -fx-text-fill: #1c1c1c;
+}
 
+/* Unread badge */
+.badge-unread {
+  -fx-background-color: #ffb3c1;
+  -fx-text-fill: #1c1c1c;
+  -fx-font-size: 10px;
+  -fx-font-weight: bold;
+  -fx-background-radius: 10;
+  -fx-padding: 2 6;
+}
+
+/* ===== Message Input Bar ===== */
 .message-bar {
   -fx-background-color: white;
-  -fx-border-color: #e2e8f0;
+  -fx-border-color: #bdbdbd;
   -fx-border-width: 1 0 0 0;
 }
 
 .msg-input {
   -fx-background-radius: 24;
   -fx-border-radius: 24;
-  -fx-border-color: #e2e8f0;
+  -fx-border-color: #bdbdbd;
   -fx-border-width: 1;
   -fx-padding: 9 16;
-  -fx-background-color: #f8fafc;
+  -fx-background-color: #e8f1f2;
+  -fx-text-fill: #1c1c1c;
 }
-.msg-input:focused { -fx-border-color: #4f46e5; }
+.msg-input:focused { -fx-border-color: #ffb3c1; -fx-background-color: white; }
 
 .btn-send {
-  -fx-background-color: #4f46e5;
-  -fx-text-fill: white;
+  -fx-background-color: #fff685;
+  -fx-text-fill: #1c1c1c;
   -fx-font-weight: bold;
   -fx-background-radius: 24;
   -fx-padding: 9 22;
   -fx-cursor: hand;
 }
-.btn-send:hover { -fx-background-color: #3730a3; }
+.btn-send:hover { -fx-background-color: #f5dd00; }
