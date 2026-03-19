@@ -42,6 +42,22 @@ public class UserEntity {
     )
     private List<UserEntity> friendList = new ArrayList<>();
 
+    @ManyToMany
+    @JoinTable(
+        name = "user_blocked",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "blocked_id")
+    )
+    private List<UserEntity> blockedList = new ArrayList<>();
+
+    @ManyToMany
+    @JoinTable(
+        name = "user_pending_requests",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "requester_id")
+    )
+    private List<UserEntity> pendingRequests = new ArrayList<>();
+
     public UserEntity() {}
 
     public UserEntity(String fname, String lname, String username, String hashedPassword) {
@@ -75,4 +91,8 @@ public class UserEntity {
     public void setPreferences(UserPreferences preferences) { this.preferences = preferences; }
 
     public List<UserEntity> getFriendList() { return friendList; }
+
+    public List<UserEntity> getBlockedList() { return blockedList; }
+
+    public List<UserEntity> getPendingRequests() { return pendingRequests; }
 }
