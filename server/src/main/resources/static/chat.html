@@ -215,8 +215,10 @@ function toggleEmojiPicker(e){
     document.getElementById('emoji-search').value='';
     var bar=document.querySelector('.message-bar');
     var rect=bar.getBoundingClientRect();
-    picker.style.bottom=(window.innerHeight-rect.top+8)+'px';
-    picker.style.left=(rect.left+8)+'px';
+    var pickerH=340;
+    picker.style.top=Math.max(4,rect.top-pickerH-6)+'px';
+    picker.style.left=Math.max(4,rect.left+50)+'px';
+    picker.style.bottom='auto';
   }
 }
 document.addEventListener('click',function(e){
