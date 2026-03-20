@@ -48,13 +48,6 @@
   </div>
 </div>
 
-<!-- EMOJI PICKER -->
-<div id="emoji-picker" class="emoji-picker hidden">
-  <input type="text" id="emoji-search" class="emoji-search" placeholder="Search emoji…" oninput="searchEmoji(this.value)"/>
-  <div class="emoji-cats" id="emoji-cats"></div>
-  <div class="emoji-grid" id="emoji-grid"></div>
-</div>
-
 <!-- REACTION PICKER -->
 <div id="reaction-picker" class="reaction-picker hidden">
   <span onclick="reactTo('❤️')">❤️</span>
@@ -99,6 +92,16 @@
     </div>
     <div id="typing-indicator" class="typing-indicator hidden"></div>
     <div class="messages" id="messages"></div>
+
+    <!-- EMOJI PICKER — lives inside chat-main, above message bar -->
+    <div id="emoji-picker" class="emoji-picker hidden">
+      <div class="emoji-picker-header">
+        <input type="text" id="emoji-search" class="emoji-search" placeholder="Search emoji…" oninput="searchEmoji(this.value)"/>
+      </div>
+      <div class="emoji-cats" id="emoji-cats"></div>
+      <div class="emoji-grid" id="emoji-grid"></div>
+    </div>
+
     <form class="message-bar" onsubmit="sendMessage(event)">
       <button type="button" class="btn-attach" onclick="document.getElementById('img-input').click()" title="Send image">📎</button>
       <button type="button" class="btn-emoji" onclick="toggleEmojiPicker(event)" title="Emoji">😊</button>
@@ -213,12 +216,7 @@ function toggleEmojiPicker(e){
   if(wasHidden){
     buildEmojiPicker();
     document.getElementById('emoji-search').value='';
-    var bar=document.querySelector('.message-bar');
-    var rect=bar.getBoundingClientRect();
-    var pickerH=340;
-    picker.style.top=Math.max(4,rect.top-pickerH-6)+'px';
-    picker.style.left=Math.max(4,rect.left+50)+'px';
-    picker.style.bottom='auto';
+    document.getElementById('emoji-search').focus();
   }
 }
 document.addEventListener('click',function(e){
