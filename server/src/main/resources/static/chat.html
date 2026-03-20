@@ -423,7 +423,7 @@ function updateLastMsg(convKey,content){
 
 function handleReceipt(msg){
   var el=document.querySelector('[data-msg-id="'+msg.content+'"] .read-receipt');
-  if(el){el.textContent='✓✓ Read';el.classList.add('seen');}
+  if(el){el.textContent='✓✓';el.classList.add('seen');}
 }
 
 // ─── Image sharing ────────────────────────────────────────────────────────
@@ -496,6 +496,8 @@ function displayMessage(msg){
       :esc(msg.content);
     var time=formatTime(msg.timestamp||msg.sentAt||null);
     var bubbleHover=msg.id?' onmouseenter="showReactionPicker(event,\''+msg.id+'\')"':'';
+    var metaTheirs=time?'<div class="msg-meta"><span class="msg-time">'+time+'</span></div>':'';
+    var metaMine='<div class="msg-meta">'+(time?'<span class="msg-time">'+time+'</span>':'')+(msg.id?'<span class="read-receipt">\u2713</span>':'')+'</div>';
     if(!isMine){
       wrap.innerHTML=
         '<div style="display:flex;align-items:flex-end;gap:6px">'+
@@ -503,7 +505,7 @@ function displayMessage(msg){
           '<div style="display:flex;flex-direction:column;max-width:100%">'+
             (label?'<span class="msg-sender">'+label+'</span>':'')+
             '<span class="msg-bubble msg-theirs'+(isPrivate?' msg-private':'')+'"'+bubbleHover+'>'+contentHtml+'</span>'+
-            '<div class="msg-meta">'+(time?'<span class="msg-time">'+time+'</span>':'')+'</div>'+
+            metaTheirs+
           '</div>'+
         '</div>';
     }else{
@@ -511,10 +513,7 @@ function displayMessage(msg){
         '<div style="display:flex;flex-direction:column;align-items:flex-end">'+
           (label?'<span class="msg-sender">'+label+'</span>':'')+
           '<span class="msg-bubble msg-mine"'+bubbleHover+'>'+contentHtml+'</span>'+
-          '<div class="msg-meta">'+
-            (time?'<span class="msg-time">'+time+'</span>':'')+
-            (msg.id?'<span class="read-receipt">\u2713 Sent</span>':'')+
-          '</div>'+
+          metaMine+
         '</div>';
     }
   }

@@ -152,12 +152,13 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 
 .msg-bubble {
   display:inline-block;
-  padding:.55rem .9rem;
+  padding:.5rem .85rem .3rem;
   border-radius:18px;
   font-size:.92rem;
   line-height:1.45;
   word-break:break-word;
   max-width:100%;
+  position:relative;
 }
 .msg-mine { background:var(--bubble-mine);color:#fff;border-bottom-right-radius:4px; }
 .msg-theirs { background:var(--bubble-theirs);color:var(--text);border-bottom-left-radius:4px; }
@@ -166,8 +167,8 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .msg-sender { font-size:.72rem;color:var(--text-muted);margin-bottom:2px;padding:0 4px; }
 
 /* ===== Read receipts ===== */
-.read-receipt { font-size:.68rem;color:var(--text-muted);margin-top:2px;padding:0 4px; }
-.read-receipt.seen { color:var(--primary);font-weight:600; }
+.read-receipt { font-size:.6rem;color:var(--text-muted);opacity:.75; }
+.read-receipt.seen { color:#4fc3f7;opacity:1; }
 
 /* ===== Online dot ===== */
 .online-dot { display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;flex-shrink:0; }
@@ -398,8 +399,8 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 }
 
 /* ===== Message timestamp ===== */
-.msg-meta { display: flex; align-items: center; gap: 6px; margin-top: 3px; padding: 0 4px; }
-.msg-time { font-size: .65rem; color: var(--text-muted); }
+.msg-meta { display: flex; align-items: center; gap: 4px; margin-top: 2px; padding: 0 2px; justify-content: flex-end; }
+.msg-time { font-size: .6rem; color: var(--text-muted); opacity: .75; }
 
 /* ===== Image messages ===== */
 .msg-image {
