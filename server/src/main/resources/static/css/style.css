@@ -440,3 +440,142 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   transition: background .1s;
 }
 .search-result-item:hover { background: var(--bg); }
+
+/* ===== Icon Rail (Teams-style left column) ===== */
+.icon-rail {
+  width: 60px;
+  background: #111827;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0 16px;
+  gap: 4px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+.rail-logo {
+  font-size: .95rem;
+  font-weight: 900;
+  color: var(--lemon);
+  margin-bottom: 14px;
+  letter-spacing: -1px;
+  text-align: center;
+  line-height: 1.1;
+}
+.rail-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: rgba(255,255,255,.4);
+  transition: all 0.15s;
+  position: relative;
+}
+.rail-btn:hover { background: rgba(255,255,255,.1); color: rgba(255,255,255,.9); }
+.rail-btn.active { background: rgba(76,111,255,.25); color: var(--primary); }
+.rail-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 20px;
+  background: var(--primary);
+  border-radius: 0 3px 3px 0;
+}
+.rail-spacer { flex: 1; }
+.rail-own-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,.15);
+  transition: border-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: .95rem;
+  color: #fff;
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+.rail-own-avatar:hover { border-color: var(--primary); }
+.rail-own-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ===== Settings Panel ===== */
+.settings-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 300px;
+  background: var(--surface);
+  box-shadow: -6px 0 24px rgba(0,0,0,.18);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  overflow-y: auto;
+}
+.settings-panel.open { transform: translateX(0); }
+.settings-overlay { position: fixed; inset: 0; z-index: 149; display: none; }
+.settings-overlay.open { display: block; }
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 1.25rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.settings-header h3 { font-size: 1rem; font-weight: 700; margin: 0; }
+.settings-close { background: none; border: none; cursor: pointer; font-size: 1.1rem; color: var(--text-muted); padding: 4px 8px; border-radius: 6px; }
+.settings-close:hover { background: var(--bg); color: var(--text); }
+.settings-section { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+.settings-section h4 { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: .75rem; }
+
+/* ===== Profile pic upload ===== */
+.profile-pic-upload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+  transition: background .15s, border-color .15s;
+}
+.profile-pic-upload:hover { background: var(--bg); border-color: var(--primary); }
+.profile-pic-upload span { font-size: .82rem; color: var(--text-muted); }
+
+/* ===== Background presets ===== */
+.bg-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.bg-preset {
+  width: 54px;
+  height: 54px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color .15s, transform .1s;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 3px;
+  font-size: .55rem;
+  font-weight: 700;
+  color: rgba(255,255,255,.9);
+  text-shadow: 0 1px 3px rgba(0,0,0,.5);
+  background-size: cover;
+  background-position: center;
+}
+.bg-preset:hover { transform: scale(1.06); }
+.bg-preset.selected { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }

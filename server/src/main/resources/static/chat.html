@@ -58,11 +58,60 @@
   <span onclick="reactTo('🔥')">🔥</span>
 </div>
 
-<!-- HIDDEN FILE INPUT -->
+<!-- HIDDEN FILE INPUTS -->
 <input type="file" id="img-input" accept="image/*" style="display:none" onchange="sendImage(this)"/>
+<input type="file" id="own-pic-input" accept="image/*" style="display:none" onchange="uploadOwnPic(this)"/>
+<input type="file" id="bg-img-input" accept="image/*,image/gif" style="display:none" onchange="uploadBackground(this)"/>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-overlay" id="settings-overlay" onclick="closeSettings()"></div>
+<div class="settings-panel" id="settings-panel">
+  <div class="settings-header">
+    <h3>Settings</h3>
+    <button class="settings-close" onclick="closeSettings()">&#x2715;</button>
+  </div>
+  <div class="settings-section">
+    <h4>Profile Picture</h4>
+    <div class="profile-pic-upload" onclick="document.getElementById('own-pic-input').click()">
+      <div id="settings-own-avatar"></div>
+      <span>Click to upload a photo</span>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h4>Chat Background</h4>
+    <div class="bg-presets">
+      <div class="bg-preset selected" data-bg="default" style="background:#e8f1f2;color:#555">Default</div>
+      <div class="bg-preset" data-bg="dark" style="background:#1a1a2e">Dark</div>
+      <div class="bg-preset" data-bg="gradient1" style="background:linear-gradient(135deg,#667eea,#764ba2)">Violet</div>
+      <div class="bg-preset" data-bg="gradient2" style="background:linear-gradient(135deg,#f093fb,#f5576c)">Pink</div>
+      <div class="bg-preset" data-bg="gradient3" style="background:linear-gradient(135deg,#4facfe,#00f2fe)">Cool</div>
+      <div class="bg-preset" data-bg="gradient4" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">Mint</div>
+      <div class="bg-preset" data-bg="gradient5" style="background:linear-gradient(135deg,#fa709a,#fee140)">Sunset</div>
+      <div class="bg-preset" data-bg="gradient6" style="background:linear-gradient(135deg,#30cfd0,#667eea)">Ocean</div>
+    </div>
+    <button class="btn-secondary" style="width:100%;font-size:.85rem" onclick="document.getElementById('bg-img-input').click()">&#128247; Upload image or GIF</button>
+  </div>
+</div>
 
 <!-- CHAT LAYOUT -->
 <div class="chat-layout">
+
+  <!-- ICON RAIL -->
+  <div class="icon-rail">
+    <div class="rail-logo">CC</div>
+    <button class="rail-btn active" id="rail-chat" onclick="setRailView('chat')" title="Chats">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </button>
+    <button class="rail-btn" id="rail-people" onclick="setRailView('people')" title="Friends">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </button>
+    <div class="rail-spacer"></div>
+    <button class="rail-btn" onclick="toggleSettings()" title="Settings">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <div class="rail-own-avatar" id="rail-own-avatar" onclick="toggleSettings()" title="My profile"></div>
+  </div>
+
   <aside class="sidebar">
     <div class="sidebar-header">
       <span class="brand-small">ChitChat</span>
@@ -150,7 +199,117 @@ function avatarColor(username){
 }
 function avatarHtml(username,size){
   size=size||'32px';
-  return '<div class="avatar" style="width:'+size+';height:'+size+';font-size:'+(parseInt(size)*0.4)+'px;background:'+avatarColor(username)+'">'+((username||'?')[0].toUpperCase())+'</div>';
+  var pic=localStorage.getItem('pic_'+username);
+  if(pic){
+    return '<div class="avatar" style="width:'+size+';height:'+size+';overflow:hidden;flex-shrink:0"><img src="'+pic+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block"></div>';
+  }
+  return '<div class="avatar" style="width:'+size+';height:'+size+';font-size:'+(parseInt(size)*0.4)+'px;background:'+avatarColor(username)+';flex-shrink:0">'+((username||'?')[0].toUpperCase())+'</div>';
+}
+
+function renderRailAvatar(){
+  var el=document.getElementById('rail-own-avatar');
+  if(!el)return;
+  var pic=localStorage.getItem('pic_'+currentUser.username);
+  if(pic){
+    el.innerHTML='<img src="'+pic+'">';
+    el.style.background='none';
+  } else {
+    el.innerHTML=currentUser.username[0].toUpperCase();
+    el.style.background=avatarColor(currentUser.username);
+  }
+}
+
+function uploadOwnPic(input){
+  var file=input.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var b64=e.target.result;
+    localStorage.setItem('pic_'+currentUser.username,b64);
+    renderRailAvatar();
+    renderSettingsOwnAvatar();
+    renderFriendList();
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+function renderSettingsOwnAvatar(){
+  var el=document.getElementById('settings-own-avatar');
+  if(el) el.innerHTML=avatarHtml(currentUser.username,'44px');
+}
+
+// ─── Background ────────────────────────────────────────────────────────────
+var BG_MAP={
+  'default':'#e8f1f2',
+  'dark':'#1a1a2e',
+  'gradient1':'linear-gradient(135deg,#667eea,#764ba2)',
+  'gradient2':'linear-gradient(135deg,#f093fb,#f5576c)',
+  'gradient3':'linear-gradient(135deg,#4facfe,#00f2fe)',
+  'gradient4':'linear-gradient(135deg,#43e97b,#38f9d7)',
+  'gradient5':'linear-gradient(135deg,#fa709a,#fee140)',
+  'gradient6':'linear-gradient(135deg,#30cfd0,#667eea)'
+};
+
+function applyBackground(){
+  var saved=localStorage.getItem('chatBg');
+  var msgEl=document.getElementById('messages');
+  if(!msgEl)return;
+  if(!saved){msgEl.style.background='';return;}
+  if(saved.startsWith('data:')){
+    msgEl.style.background='url("'+saved+'") center/cover';
+  } else {
+    var val=BG_MAP[saved]||saved;
+    msgEl.style.background=val;
+  }
+  document.querySelectorAll('.bg-preset').forEach(function(el){
+    el.classList.toggle('selected',el.dataset.bg===saved);
+  });
+}
+
+function selectBackground(key){
+  localStorage.setItem('chatBg',key);
+  applyBackground();
+}
+
+function uploadBackground(input){
+  var file=input.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    localStorage.setItem('chatBg',e.target.result);
+    document.querySelectorAll('.bg-preset').forEach(function(el){el.classList.remove('selected');});
+    applyBackground();
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+
+// ─── Settings panel ────────────────────────────────────────────────────────
+function toggleSettings(){
+  var panel=document.getElementById('settings-panel');
+  var overlay=document.getElementById('settings-overlay');
+  var isOpen=panel.classList.contains('open');
+  if(isOpen){closeSettings();}
+  else{
+    panel.classList.add('open');
+    overlay.classList.add('open');
+    renderSettingsOwnAvatar();
+    document.querySelectorAll('.bg-preset').forEach(function(el){
+      el.onclick=function(){selectBackground(el.dataset.bg);};
+      el.classList.toggle('selected',localStorage.getItem('chatBg')===el.dataset.bg);
+    });
+  }
+}
+function closeSettings(){
+  document.getElementById('settings-panel').classList.remove('open');
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+// ─── Rail view ─────────────────────────────────────────────────────────────
+function setRailView(view){
+  document.getElementById('rail-chat').classList.toggle('active',view==='chat');
+  document.getElementById('rail-people').classList.toggle('active',view==='people');
 }
 
 var ud=sessionStorage.getItem('user');
@@ -158,9 +317,11 @@ if(!ud){window.location.href='index.html';}
 currentUser=JSON.parse(ud);
 document.getElementById('user-info').innerHTML=
   '<div style="display:flex;align-items:center;gap:8px">'+
-  '<div class="avatar" style="width:34px;height:34px;font-size:14px;background:'+avatarColor(currentUser.username)+'">'+currentUser.username[0].toUpperCase()+'</div>'+
+  avatarHtml(currentUser.username,'34px')+
   '<div><div style="font-weight:600;color:#e8f1f2;font-size:.85rem">'+esc(currentUser.fname)+' '+esc(currentUser.lname)+'</div>'+
   '<div style="font-size:.72rem;color:var(--gray)">@'+esc(currentUser.username)+'</div></div></div>';
+renderRailAvatar();
+applyBackground();
 
 // ─── Emoji picker ─────────────────────────────────────────────────────────
 var EMOJI_CATS=[
