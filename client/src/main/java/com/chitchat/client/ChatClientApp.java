@@ -9,7 +9,7 @@ import java.io.IOException;
 
 public class ChatClientApp extends Application {
 
-    public static final String SERVER_URL = "http://localhost:8080";
+    public static final String SERVER_URL = "https://chitchat-moy8.onrender.com";
 
     @Override
     public void start(Stage stage) throws IOException {

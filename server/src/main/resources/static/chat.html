@@ -62,14 +62,14 @@
     <ul id="user-list" class="user-list"></ul>
 
     <div class="sidebar-section-title" style="display:flex;align-items:center;justify-content:space-between;padding-right:10px">
-      <span>Group Chats</span>
+      <span>Chats</span>
       <button class="btn-new-room" onclick="showCreateRoom()">+</button>
     </div>
     <ul id="room-list" class="user-list"></ul>
   </aside>
 
   <main class="chat-main">
-    <div class="chat-header" id="chat-header">Public Chat</div>
+    <div class="chat-header" id="chat-header">Select a conversation</div>
     <div class="messages" id="messages"></div>
     <form class="message-bar" onsubmit="sendMessage(event)">
       <input type="text" id="msg-input" placeholder="Type a message&hellip;" autocomplete="off" required/>
@@ -81,9 +81,10 @@
 <!-- Create room modal -->
 <div id="room-modal" class="modal hidden">
   <div class="modal-card">
-    <h3>New Group Chat</h3>
-    <input type="text" id="room-name" placeholder="Room name"/>
-    <input type="text" id="room-desc" placeholder="Description (optional)"/>
+    <h3>New Chat</h3>
+    <input type="text" id="room-name" placeholder="Chat name"/>
+    <p style="font-size:.82rem;color:var(--text-muted);margin:8px 0 4px">Add friends:</p>
+    <div id="room-friends-list" style="max-height:160px;overflow-y:auto;border:1px solid var(--gray);border-radius:8px;padding:6px 10px;margin-bottom:6px"></div>
     <p id="room-error" class="error-msg"></p>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="hideCreateRoom()">Cancel</button>
@@ -95,7 +96,7 @@
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 <script>
-var stompClient=null,currentUser=null,chatMode='public',peerConn=null,localStream=null,callTarget=null,incomingOffer=null;
+var stompClient=null,currentUser=null,chatMode='',peerConn=null,localStream=null,callTarget=null,incomingOffer=null;
 var ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
 var roomSubscriptions={};
 var myFriends=[];
@@ -111,7 +112,6 @@ function connect(){
   stompClient=Stomp.over(socket);
   stompClient.debug=null;
   stompClient.connect({},function(){
-    stompClient.subscribe('/topic/public',function(m){handleMessage(JSON.parse(m.body));});
     stompClient.subscribe('/user/queue/private',function(m){handleMessage(JSON.parse(m.body));});
     stompClient.subscribe('/user/queue/receipts',function(m){handleReceipt(JSON.parse(m.body));});
     stompClient.subscribe('/topic/users',function(m){updateOnlineUsers(JSON.parse(m.body).content);});
@@ -119,7 +119,6 @@ function connect(){
     stompClient.send('/app/chat.join',{},JSON.stringify({type:'LOGIN',sender:currentUser.username,receiver:null,content:''}));
     loadFriends();
     loadRooms();
-    loadHistory('public',null);
   });
 }
 
@@ -188,9 +187,8 @@ function sendMessage(e){
   var content=document.getElementById('msg-input').value.trim();
   if(!content||!stompClient)return;
   document.getElementById('msg-input').value='';
-  if(chatMode==='public'){
-    stompClient.send('/app/chat.sendPublic',{},JSON.stringify({type:'PUBLIC_MESSAGE',sender:currentUser.username,receiver:null,content:content}));
-  }else if(chatMode.startsWith('private:')){
+  if(chatMode===''){return;}
+  if(chatMode.startsWith('private:')){
     var target=chatMode.split(':')[1];
     stompClient.send('/app/chat.sendPrivate',{},JSON.stringify({type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:content}));
   }else if(chatMode.startsWith('room:')){
@@ -254,10 +252,9 @@ function displayMessage(msg){
 
 function setPrivateChat(username){
   if(chatMode==='private:'+username){
-    chatMode='public';
-    document.getElementById('chat-header').textContent='Public Chat';
+    chatMode='';
+    document.getElementById('chat-header').textContent='Select a conversation';
     document.getElementById('messages').innerHTML='';
-    loadHistory('public',null);
   }else{
     chatMode='private:'+username;
     document.getElementById('chat-header').textContent='@'+username;
@@ -301,18 +298,40 @@ async function joinAndOpenRoom(roomId,roomName){
   renderFriendList();
 }
 
-function showCreateRoom(){document.getElementById('room-modal').classList.remove('hidden');}
+function showCreateRoom(){
+  var fl=document.getElementById('room-friends-list');
+  fl.innerHTML='';
+  if(myFriends.length===0){
+    fl.innerHTML='<span style="color:var(--text-muted);font-size:.82rem;font-style:italic">No friends yet</span>';
+  }else{
+    myFriends.forEach(function(u){
+      var label=document.createElement('label');
+      label.style.cssText='display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:.88rem';
+      label.innerHTML='<input type="checkbox" value="'+esc(u)+'"> '+esc(u);
+      fl.appendChild(label);
+    });
+  }
+  document.getElementById('room-name').value='';
+  document.getElementById('room-error').textContent='';
+  document.getElementById('room-modal').classList.remove('hidden');
+}
 function hideCreateRoom(){document.getElementById('room-modal').classList.add('hidden');}
 
 async function createRoom(){
   var name=document.getElementById('room-name').value.trim();
-  var desc=document.getElementById('room-desc').value.trim();
   var err=document.getElementById('room-error');
-  if(!name){err.textContent='Room name is required.';return;}
+  if(!name){err.textContent='Chat name is required.';return;}
   err.textContent='';
-  var res=await fetch('/api/rooms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,description:desc,username:currentUser.username})});
-  if(res.ok){document.getElementById('room-name').value='';document.getElementById('room-desc').value='';hideCreateRoom();loadRooms();}
-  else{var d=await res.json();err.textContent=d.error||'Failed.';}
+  var res=await fetch('/api/rooms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,description:'',username:currentUser.username})});
+  if(!res.ok){var d=await res.json();err.textContent=d.error||'Failed.';return;}
+  var room=await res.json();
+  var checked=Array.from(document.querySelectorAll('#room-friends-list input[type=checkbox]:checked')).map(function(cb){return cb.value;});
+  await Promise.all(checked.map(function(u){
+    return fetch('/api/rooms/'+room.id+'/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u})});
+  }));
+  document.getElementById('room-name').value='';
+  hideCreateRoom();
+  loadRooms();
 }
 
 // ─── Calls ────────────────────────────────────────────────────────────────
