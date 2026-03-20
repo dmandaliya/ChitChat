@@ -305,30 +305,65 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   position: fixed;
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.18);
-  padding: 10px;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.2);
   z-index: 500;
-  width: 300px;
+  width: 340px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .emoji-picker.hidden { display: none; }
+.emoji-search {
+  margin: 10px 10px 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: .85rem;
+  outline: none;
+  width: calc(100% - 20px);
+}
+.emoji-search:focus { border-color: var(--primary); }
+.emoji-cats {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.emoji-cats::-webkit-scrollbar { display: none; }
+.emoji-cat-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  padding: 4px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: .5;
+  transition: opacity .15s, background .15s;
+  flex-shrink: 0;
+}
+.emoji-cat-btn:hover { opacity: 1; background: var(--bg); }
+.emoji-cat-btn.active { opacity: 1; background: var(--bg); }
 .emoji-grid {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 2px;
-  max-height: 200px;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0;
+  max-height: 220px;
   overflow-y: auto;
+  padding: 6px 8px 10px;
 }
 .emoji-grid span {
-  font-size: 1.2rem;
+  font-size: 1.35rem;
   text-align: center;
   cursor: pointer;
-  border-radius: 6px;
-  padding: 3px 2px;
-  transition: background .1s;
-  line-height: 1.5;
+  border-radius: 8px;
+  padding: 4px 2px;
+  transition: background .1s, transform .1s;
+  line-height: 1.4;
 }
-.emoji-grid span:hover { background: var(--bg); }
+.emoji-grid span:hover { background: var(--bg); transform: scale(1.2); }
 
 /* ===== Reaction picker ===== */
 .reaction-picker {
