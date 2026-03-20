@@ -29,6 +29,7 @@
     <span id="call-with-label" style="color:white;font-weight:600"></span>
     <button class="btn-icon-lg" onclick="toggleMute()">Mute</button>
     <button class="btn-icon-lg" onclick="toggleCamera()">Camera</button>
+    <button class="btn-icon-lg" onclick="toggleScreenShare()">Screen</button>
     <button class="btn-icon-lg danger" onclick="hangUp()">End</button>
   </div>
 </div>
@@ -37,7 +38,8 @@
 <div id="add-friend-modal" class="modal hidden">
   <div class="modal-card">
     <h3>Add Friend</h3>
-    <input type="text" id="add-friend-input" placeholder="Enter username"/>
+    <input type="text" id="add-friend-input" placeholder="Search by username&hellip;" oninput="searchUsers(this.value)"/>
+    <div id="user-search-results" class="user-search-results"></div>
     <p id="add-friend-error" class="error-msg"></p>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="hideAddFriend()">Cancel</button>
@@ -45,6 +47,24 @@
     </div>
   </div>
 </div>
+
+<!-- EMOJI PICKER -->
+<div id="emoji-picker" class="emoji-picker hidden">
+  <div class="emoji-grid" id="emoji-grid"></div>
+</div>
+
+<!-- REACTION PICKER -->
+<div id="reaction-picker" class="reaction-picker hidden">
+  <span onclick="reactTo('❤️')">❤️</span>
+  <span onclick="reactTo('😂')">😂</span>
+  <span onclick="reactTo('😮')">😮</span>
+  <span onclick="reactTo('😢')">😢</span>
+  <span onclick="reactTo('👍')">👍</span>
+  <span onclick="reactTo('🔥')">🔥</span>
+</div>
+
+<!-- HIDDEN FILE INPUT -->
+<input type="file" id="img-input" accept="image/*" style="display:none" onchange="sendImage(this)"/>
 
 <!-- CHAT LAYOUT -->
 <div class="chat-layout">
@@ -69,10 +89,18 @@
   </aside>
 
   <main class="chat-main">
-    <div class="chat-header" id="chat-header">Select a conversation</div>
+    <div class="chat-header" id="chat-header">
+      <div id="chat-header-info" style="display:flex;flex-direction:column;gap:2px">
+        <span id="chat-header-name">Select a conversation</span>
+        <span id="chat-header-status" class="chat-header-status"></span>
+      </div>
+    </div>
+    <div id="typing-indicator" class="typing-indicator hidden"></div>
     <div class="messages" id="messages"></div>
     <form class="message-bar" onsubmit="sendMessage(event)">
-      <input type="text" id="msg-input" placeholder="Type a message&hellip;" autocomplete="off" required/>
+      <button type="button" class="btn-attach" onclick="document.getElementById('img-input').click()" title="Send image">📎</button>
+      <button type="button" class="btn-emoji" onclick="toggleEmojiPicker(event)" title="Emoji">😊</button>
+      <input type="text" id="msg-input" placeholder="Type a message&hellip;" autocomplete="off" oninput="onTyping()"/>
       <button type="submit" class="btn-send">Send</button>
     </form>
   </main>
@@ -96,17 +124,83 @@
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 <script>
+// ─── State ────────────────────────────────────────────────────────────────
 var stompClient=null,currentUser=null,chatMode='',peerConn=null,localStream=null,callTarget=null,incomingOffer=null;
 var ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
 var roomSubscriptions={};
 var myFriends=[];
 var onlineSet=new Set();
+var unreadCounts={};
+var lastMessages={};
+var typingTimers={};
+var currentReactMsgId=null;
+var screenStream=null;
 
 var ud=sessionStorage.getItem('user');
 if(!ud){window.location.href='index.html';}
 currentUser=JSON.parse(ud);
-document.getElementById('user-info').textContent=currentUser.fname+' '+currentUser.lname+' (@'+currentUser.username+')';
+document.getElementById('user-info').innerHTML=
+  '<div style="display:flex;align-items:center;gap:8px">'+
+  '<div class="avatar" style="width:34px;height:34px;font-size:14px;background:'+avatarColor(currentUser.username)+'">'+currentUser.username[0].toUpperCase()+'</div>'+
+  '<div><div style="font-weight:600;color:#e8f1f2;font-size:.85rem">'+esc(currentUser.fname)+' '+esc(currentUser.lname)+'</div>'+
+  '<div style="font-size:.72rem;color:var(--gray)">@'+esc(currentUser.username)+'</div></div></div>';
 
+// ─── Emoji picker ─────────────────────────────────────────────────────────
+var EMOJIS=[
+  '😀','😂','😍','🥰','😊','😎','🤔','😅','😭','🤣','😴','😤','🥺','🤩','😏',
+  '😈','🤯','🥳','😇','🤗','😬','🙄','😑','🤐','🥱','😋','🤑','😪','😵','🤧',
+  '👍','👎','❤️','🙏','👏','🤝','✌️','🤞','💪','👊','✋','🤙','💅','🫶','🫂',
+  '🎉','🔥','✨','💯','🎊','🎈','🏆','🎯','💡','🔑','💎','🎵','🎶','💀','👻',
+  '🍕','🍔','🍟','🍣','🍜','🍩','🍪','🎂','🍰','☕','🍺','🥂','🍓','🥑','🌮',
+  '🌸','🌺','🌈','⭐','🌙','☀️','🌊','🌿','🦋','🐶','🐱','🦊','🐸','🌻','❄️'
+];
+(function(){
+  var grid=document.getElementById('emoji-grid');
+  EMOJIS.forEach(function(e){
+    var span=document.createElement('span');
+    span.textContent=e;
+    span.onclick=function(){insertEmoji(e);};
+    grid.appendChild(span);
+  });
+})();
+
+function toggleEmojiPicker(e){
+  e.stopPropagation();
+  var picker=document.getElementById('emoji-picker');
+  picker.classList.toggle('hidden');
+  if(!picker.classList.contains('hidden')){
+    var bar=document.querySelector('.message-bar');
+    var rect=bar.getBoundingClientRect();
+    picker.style.bottom=(window.innerHeight-rect.top+8)+'px';
+    picker.style.left=(rect.left+8)+'px';
+  }
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#emoji-picker')&&!e.target.classList.contains('btn-emoji')){
+    document.getElementById('emoji-picker').classList.add('hidden');
+  }
+});
+function insertEmoji(emoji){
+  var input=document.getElementById('msg-input');
+  var pos=input.selectionStart||input.value.length;
+  input.value=input.value.slice(0,pos)+emoji+input.value.slice(pos);
+  input.focus();
+  input.selectionStart=input.selectionEnd=pos+emoji.length;
+  document.getElementById('emoji-picker').classList.add('hidden');
+}
+
+// ─── Avatar ────────────────────────────────────────────────────────────────
+var AVATAR_COLORS=['#4c6fff','#ff6b9d','#f59e0b','#10b981','#8b5cf6','#ef4444','#06b6d4','#84cc16'];
+function avatarColor(username){
+  var h=0;for(var i=0;i<(username||'').length;i++)h=(h*31+username.charCodeAt(i))%AVATAR_COLORS.length;
+  return AVATAR_COLORS[h];
+}
+function avatarHtml(username,size){
+  size=size||'32px';
+  return '<div class="avatar" style="width:'+size+';height:'+size+';font-size:'+(parseInt(size)*0.4)+'px;background:'+avatarColor(username)+'">'+((username||'?')[0].toUpperCase())+'</div>';
+}
+
+// ─── Connect ──────────────────────────────────────────────────────────────
 function connect(){
   var socket=new SockJS('/ws');
   stompClient=Stomp.over(socket);
@@ -123,7 +217,6 @@ function connect(){
 }
 
 // ─── Friends ──────────────────────────────────────────────────────────────
-
 async function loadFriends(){
   var res=await fetch('/api/users/'+currentUser.username+'/friends');
   var friends=await res.json();
@@ -141,33 +234,75 @@ function renderFriendList(){
   list.innerHTML='';
   if(myFriends.length===0){
     var empty=document.createElement('li');
-    empty.style.cssText='color:var(--text-muted);font-size:.82rem;font-style:italic;cursor:default;pointer-events:none';
+    empty.style.cssText='color:var(--text-muted);font-size:.82rem;font-style:italic;cursor:default;pointer-events:none;padding:.6rem 1rem;display:block';
     empty.textContent='No friends yet — press + to add';
     list.appendChild(empty);
     return;
   }
-  var sorted=myFriends.slice().sort(function(a,b){
-    return (onlineSet.has(b)?1:0)-(onlineSet.has(a)?1:0);
-  });
+  var sorted=myFriends.slice().sort(function(a,b){return (onlineSet.has(b)?1:0)-(onlineSet.has(a)?1:0);});
   sorted.forEach(function(username){
     var isOnline=onlineSet.has(username);
+    var isActive=chatMode==='private:'+username;
+    var unread=unreadCounts['private:'+username]||0;
+    var lastMsg=lastMessages['private:'+username]||'';
+    var isTyping=typingTimers[username]&&typingTimers[username].showing;
     var li=document.createElement('li');
-    li.classList.toggle('friend-offline',!isOnline);
-    li.innerHTML='<span class="online-dot '+(isOnline?'dot-on':'dot-off')+'"></span>'+
-      '<span class="user-name">'+esc(username)+'</span>'+
-      (isOnline?'<span class="call-btns">'+
-        '<button title="Voice" onclick="startCall(\''+username+'\',false)">&#9742;</button>'+
-        '<button title="Video" onclick="startCall(\''+username+'\',true)">&#128249;</button>'+
-      '</span>':'');
-    li.querySelector('.user-name').onclick=function(){setPrivateChat(username);};
-    li.style.cursor='pointer';
-    li.classList.toggle('active-target',chatMode==='private:'+username);
+    li.className='friend-item'+(isActive?' active-target':'')+(isOnline?'':' friend-offline');
+    li.innerHTML=
+      '<div class="friend-avatar-wrap">'+
+        avatarHtml(username,'36px')+
+        '<span class="status-dot '+(isOnline?'dot-on':'dot-off')+'"></span>'+
+      '</div>'+
+      '<div class="friend-info">'+
+        '<div class="friend-name-row">'+
+          '<span class="user-name">'+esc(username)+'</span>'+
+          (unread>0?'<span class="badge">'+unread+'</span>':'')+
+        '</div>'+
+        '<div class="friend-preview">'+(isTyping?'<em style="color:#22c55e;font-style:italic">typing\u2026</em>':esc(lastMsg))+'</div>'+
+      '</div>'+
+      (isOnline?
+        '<div class="call-btns">'+
+          '<button title="Voice" onclick="event.stopPropagation();startCall(\''+esc(username)+'\',false)">📞</button>'+
+          '<button title="Video" onclick="event.stopPropagation();startCall(\''+esc(username)+'\',true)">🎥</button>'+
+        '</div>':''
+      );
+    li.onclick=function(){setPrivateChat(username);};
     list.appendChild(li);
   });
 }
 
-function showAddFriend(){document.getElementById('add-friend-modal').classList.remove('hidden');document.getElementById('add-friend-input').value='';document.getElementById('add-friend-error').textContent='';}
+// ─── Add Friend with search ────────────────────────────────────────────────
+function showAddFriend(){
+  document.getElementById('add-friend-modal').classList.remove('hidden');
+  document.getElementById('add-friend-input').value='';
+  document.getElementById('add-friend-error').textContent='';
+  document.getElementById('user-search-results').innerHTML='';
+}
 function hideAddFriend(){document.getElementById('add-friend-modal').classList.add('hidden');}
+
+var searchTimeout=null;
+function searchUsers(q){
+  clearTimeout(searchTimeout);
+  var results=document.getElementById('user-search-results');
+  if(!q){results.innerHTML='';return;}
+  searchTimeout=setTimeout(async function(){
+    try{
+      var res=await fetch('/api/users/search?q='+encodeURIComponent(q));
+      if(!res.ok){results.innerHTML='';return;}
+      var users=await res.json();
+      results.innerHTML='';
+      var filtered=users.filter(function(u){return u.username!==currentUser.username;});
+      filtered.forEach(function(u){
+        var div=document.createElement('div');
+        div.className='search-result-item';
+        div.innerHTML=avatarHtml(u.username,'28px')+'<span>'+esc(u.username)+'</span>';
+        div.onclick=function(){document.getElementById('add-friend-input').value=u.username;results.innerHTML='';};
+        results.appendChild(div);
+      });
+      if(filtered.length===0){results.innerHTML='<div style="color:var(--text-muted);font-size:.82rem;padding:6px 0">No users found</div>';}
+    }catch(ex){results.innerHTML='';}
+  },300);
+}
 
 async function addFriend(){
   var friendUsername=document.getElementById('add-friend-input').value.trim();
@@ -180,58 +315,138 @@ async function addFriend(){
   else{var d=await res.json();err.textContent=d.error||'User not found.';}
 }
 
-// ─── Messaging ────────────────────────────────────────────────────────────
+// ─── Typing indicator ─────────────────────────────────────────────────────
+var typingCooldown=false;
+function onTyping(){
+  if(!chatMode.startsWith('private:')||typingCooldown||!stompClient)return;
+  typingCooldown=true;
+  var target=chatMode.split(':')[1];
+  stompClient.send('/app/chat.typing',{},JSON.stringify({type:'TYPING',sender:currentUser.username,receiver:target,content:''}));
+  setTimeout(function(){typingCooldown=false;},2000);
+}
 
+function showTypingIndicator(sender){
+  if(chatMode!=='private:'+sender)return;
+  var el=document.getElementById('typing-indicator');
+  el.textContent=sender+' is typing\u2026';
+  el.classList.remove('hidden');
+  if(typingTimers[sender])clearTimeout(typingTimers[sender].timer);
+  typingTimers[sender]={showing:true,timer:setTimeout(function(){
+    typingTimers[sender].showing=false;
+    el.classList.add('hidden');
+    renderFriendList();
+  },3000)};
+  renderFriendList();
+}
+
+// ─── Messaging ────────────────────────────────────────────────────────────
 function sendMessage(e){
   e.preventDefault();
   var content=document.getElementById('msg-input').value.trim();
-  if(!content||!stompClient)return;
+  if(!content||!stompClient||chatMode==='')return;
   document.getElementById('msg-input').value='';
-  if(chatMode===''){return;}
   if(chatMode.startsWith('private:')){
     var target=chatMode.split(':')[1];
     stompClient.send('/app/chat.sendPrivate',{},JSON.stringify({type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:content}));
+    updateLastMsg(chatMode,content);
   }else if(chatMode.startsWith('room:')){
-    var roomId=chatMode.split(':')[1];
-    stompClient.send('/app/chat.sendRoom',{},JSON.stringify({type:'ROOM_MESSAGE',sender:currentUser.username,receiver:null,roomId:roomId,content:content}));
+    var parts=chatMode.split(':');
+    stompClient.send('/app/chat.sendRoom',{},JSON.stringify({type:'ROOM_MESSAGE',sender:currentUser.username,receiver:null,roomId:parts[1],content:content}));
   }
 }
 
 function handleMessage(msg){
   if(msg.type==='USER_LIST'){updateOnlineUsers(msg.content);return;}
-  displayMessage(msg);
+  if(msg.type==='TYPING'){showTypingIndicator(msg.sender);return;}
+  var convKey='';
+  if(msg.type==='PRIVATE_MESSAGE'){
+    convKey=msg.sender===currentUser.username?'private:'+msg.receiver:'private:'+msg.sender;
+  }else if(msg.type==='ROOM_MESSAGE'&&msg.roomId){
+    convKey='room:'+msg.roomId;
+  }
+  if(convKey&&msg.content){
+    updateLastMsg(convKey,msg.content);
+  }
+  if(convKey&&convKey!==chatMode&&msg.sender!==currentUser.username){
+    unreadCounts[convKey]=(unreadCounts[convKey]||0)+1;
+    renderFriendList();
+    loadRooms();
+  }
+  if(convKey===chatMode||msg.sender===currentUser.username){
+    displayMessage(msg);
+  }
   if(msg.id&&msg.sender!==currentUser.username){
     stompClient.send('/app/chat.read',{},JSON.stringify({id:msg.id,type:'READ_RECEIPT',sender:currentUser.username,receiver:msg.sender,content:msg.id}));
   }
 }
 
+function updateLastMsg(convKey,content){
+  var preview=content.startsWith('data:image/')?'📷 Photo':content;
+  lastMessages[convKey]=preview.length>30?preview.slice(0,30)+'\u2026':preview;
+  renderFriendList();
+}
+
 function handleReceipt(msg){
   var el=document.querySelector('[data-msg-id="'+msg.content+'"] .read-receipt');
-  if(el){el.textContent='Read';el.classList.add('seen');}
+  if(el){el.textContent='✓✓ Read';el.classList.add('seen');}
+}
+
+// ─── Image sharing ────────────────────────────────────────────────────────
+function sendImage(input){
+  if(!input.files||!input.files[0]||chatMode==='')return;
+  var file=input.files[0];
+  if(file.size>2*1024*1024){alert('Image must be under 2 MB');input.value='';return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var b64=e.target.result;
+    if(chatMode.startsWith('private:')){
+      var target=chatMode.split(':')[1];
+      stompClient.send('/app/chat.sendPrivate',{},JSON.stringify({type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:b64}));
+      updateLastMsg(chatMode,'📷 Photo');
+    }else if(chatMode.startsWith('room:')){
+      var parts=chatMode.split(':');
+      stompClient.send('/app/chat.sendRoom',{},JSON.stringify({type:'ROOM_MESSAGE',sender:currentUser.username,receiver:null,roomId:parts[1],content:b64}));
+    }
+  };
+  reader.readAsDataURL(file);
+  input.value='';
 }
 
 // ─── History ──────────────────────────────────────────────────────────────
-
 async function loadHistory(type,param){
   var url;
-  if(type==='public') url='/api/messages/public';
-  else if(type==='private') url='/api/messages/private?user1='+encodeURIComponent(currentUser.username)+'&user2='+encodeURIComponent(param);
+  if(type==='private') url='/api/messages/private?user1='+encodeURIComponent(currentUser.username)+'&user2='+encodeURIComponent(param);
   else if(type==='room') url='/api/messages/room/'+param;
   else return;
   try{
     var res=await fetch(url);
     var msgs=await res.json();
     msgs.forEach(function(m){displayMessage(m);});
+    if(msgs.length>0){
+      var last=msgs[msgs.length-1];
+      updateLastMsg(chatMode,last.content||'');
+    }
   }catch(ex){}
 }
 
 // ─── Display ──────────────────────────────────────────────────────────────
+function formatTime(ts){
+  if(!ts)return'';
+  try{
+    var d=new Date(ts);
+    var now=new Date();
+    var isToday=d.toDateString()===now.toDateString();
+    if(isToday)return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    return d.toLocaleDateString([],{month:'short',day:'numeric'})+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  }catch(ex){return'';}
+}
 
 function displayMessage(msg){
   var messages=document.getElementById('messages');
   var isMine=msg.sender===currentUser.username;
   var isSystem=msg.sender==='System';
   var isPrivate=msg.type==='PRIVATE_MESSAGE';
+  var isImage=msg.content&&msg.content.startsWith('data:image/');
   var wrap=document.createElement('div');
   wrap.classList.add('msg-wrap',isMine?'mine':'theirs');
   if(msg.id)wrap.dataset.msgId=msg.id;
@@ -239,26 +454,94 @@ function displayMessage(msg){
     wrap.innerHTML='<span class="msg-system">'+esc(msg.content)+'</span>';
   }else{
     var label='';
-    if(!isMine)label=isPrivate?esc(msg.sender)+' &rarr; You (private)':esc(msg.sender);
-    else if(isPrivate)label='You &rarr; '+esc(msg.receiver)+' (private)';
-    wrap.innerHTML=(label?'<span class="msg-sender">'+label+'</span>':'')+
-      '<span class="msg-bubble '+(isMine?'msg-mine':'msg-theirs')+(isPrivate?' msg-private':'')+'">'
-      +esc(msg.content)+'</span>'+
-      (isMine&&msg.id?'<span class="read-receipt">Sent</span>':'');
+    if(!isMine)label=isPrivate?esc(msg.sender)+' \u2192 You':esc(msg.sender);
+    else if(isPrivate)label='You \u2192 '+esc(msg.receiver);
+    var contentHtml=isImage
+      ?'<img src="'+msg.content+'" class="msg-image" onclick="viewImage(this.src)"/>'
+      :esc(msg.content);
+    var time=formatTime(msg.timestamp||msg.sentAt||null);
+    var bubbleHover=msg.id?' onmouseenter="showReactionPicker(event,\''+msg.id+'\')"':'';
+    if(!isMine){
+      wrap.innerHTML=
+        '<div style="display:flex;align-items:flex-end;gap:6px">'+
+          avatarHtml(msg.sender,'28px')+
+          '<div style="display:flex;flex-direction:column;max-width:100%">'+
+            (label?'<span class="msg-sender">'+label+'</span>':'')+
+            '<span class="msg-bubble msg-theirs'+(isPrivate?' msg-private':'')+'"'+bubbleHover+'>'+contentHtml+'</span>'+
+            '<div class="msg-meta">'+(time?'<span class="msg-time">'+time+'</span>':'')+'</div>'+
+          '</div>'+
+        '</div>';
+    }else{
+      wrap.innerHTML=
+        '<div style="display:flex;flex-direction:column;align-items:flex-end">'+
+          (label?'<span class="msg-sender">'+label+'</span>':'')+
+          '<span class="msg-bubble msg-mine"'+bubbleHover+'>'+contentHtml+'</span>'+
+          '<div class="msg-meta">'+
+            (time?'<span class="msg-time">'+time+'</span>':'')+
+            (msg.id?'<span class="read-receipt">\u2713 Sent</span>':'')+
+          '</div>'+
+        '</div>';
+    }
   }
   messages.appendChild(wrap);
   messages.scrollTop=messages.scrollHeight;
 }
 
+// ─── Reactions ────────────────────────────────────────────────────────────
+function showReactionPicker(e,msgId){
+  currentReactMsgId=msgId;
+  var picker=document.getElementById('reaction-picker');
+  picker.classList.remove('hidden');
+  var rect=e.target.getBoundingClientRect();
+  picker.style.top=Math.max(0,rect.top-52)+'px';
+  picker.style.left=rect.left+'px';
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('#reaction-picker')&&!e.target.closest('.msg-bubble')){
+    document.getElementById('reaction-picker').classList.add('hidden');
+  }
+});
+function reactTo(emoji){
+  document.getElementById('reaction-picker').classList.add('hidden');
+  if(!currentReactMsgId)return;
+  var wrap=document.querySelector('[data-msg-id="'+currentReactMsgId+'"]');
+  if(wrap){
+    var existing=wrap.querySelector('.reactions');
+    if(!existing){existing=document.createElement('div');existing.className='reactions';wrap.appendChild(existing);}
+    // Find existing badge for this emoji
+    var found=Array.from(existing.querySelectorAll('.reaction-badge')).find(function(b){return b.dataset.emoji===emoji;});
+    if(found){var cnt=parseInt(found.dataset.count||1)+1;found.dataset.count=cnt;found.textContent=emoji+' '+cnt;}
+    else{var span=document.createElement('span');span.className='reaction-badge';span.dataset.emoji=emoji;span.dataset.count=1;span.textContent=emoji+' 1';existing.appendChild(span);}
+  }
+}
+
+// ─── Image viewer ──────────────────────────────────────────────────────────
+function viewImage(src){
+  var ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:999;cursor:zoom-out';
+  var img=document.createElement('img');
+  img.src=src;
+  img.style.cssText='max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5)';
+  ov.appendChild(img);
+  ov.onclick=function(){document.body.removeChild(ov);};
+  document.body.appendChild(ov);
+}
+
+// ─── Chat mode ────────────────────────────────────────────────────────────
 function setPrivateChat(username){
   if(chatMode==='private:'+username){
     chatMode='';
-    document.getElementById('chat-header').textContent='Select a conversation';
+    document.getElementById('chat-header-name').textContent='Select a conversation';
+    document.getElementById('chat-header-status').textContent='';
     document.getElementById('messages').innerHTML='';
+    document.getElementById('typing-indicator').classList.add('hidden');
   }else{
     chatMode='private:'+username;
-    document.getElementById('chat-header').textContent='@'+username;
+    unreadCounts['private:'+username]=0;
+    document.getElementById('chat-header-name').textContent='@'+username;
+    document.getElementById('chat-header-status').textContent=onlineSet.has(username)?'\u25cf Online':'';
     document.getElementById('messages').innerHTML='';
+    document.getElementById('typing-indicator').classList.add('hidden');
     loadHistory('private',username);
   }
   renderFriendList();
@@ -266,19 +549,31 @@ function setPrivateChat(username){
 }
 
 // ─── Rooms ────────────────────────────────────────────────────────────────
-
 async function loadRooms(){
   var res=await fetch('/api/rooms');
   var rooms=await res.json();
   var list=document.getElementById('room-list');
   list.innerHTML='';
   rooms.forEach(function(room){
+    var unread=unreadCounts['room:'+room.id]||0;
+    var lastMsg=lastMessages['room:'+room.id]||'';
+    var isActive=chatMode.startsWith('room:'+room.id+':');
     var li=document.createElement('li');
-    li.textContent='# '+room.name;
+    li.className='friend-item'+(isActive?' active-target':'');
+    li.innerHTML=
+      '<div class="friend-avatar-wrap">'+
+        '<div class="avatar" style="background:var(--primary);width:36px;height:36px;font-size:16px">#</div>'+
+      '</div>'+
+      '<div class="friend-info">'+
+        '<div class="friend-name-row">'+
+          '<span class="user-name">'+esc(room.name)+'</span>'+
+          (unread>0?'<span class="badge">'+unread+'</span>':'')+
+        '</div>'+
+        '<div class="friend-preview">'+esc(lastMsg)+'</div>'+
+      '</div>';
     li.onclick=function(){joinAndOpenRoom(room.id,room.name);};
-    li.classList.toggle('active-target',chatMode==='room:'+room.id+':'+room.name);
     list.appendChild(li);
-    subscribeRoom(room.id);
+    if(stompClient)subscribeRoom(room.id);
   });
 }
 
@@ -291,11 +586,14 @@ async function joinAndOpenRoom(roomId,roomName){
   await fetch('/api/rooms/'+roomId+'/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});
   subscribeRoom(roomId);
   chatMode='room:'+roomId+':'+roomName;
-  document.getElementById('chat-header').textContent='# '+roomName;
+  unreadCounts['room:'+roomId]=0;
+  document.getElementById('chat-header-name').textContent='# '+roomName;
+  document.getElementById('chat-header-status').textContent='';
   document.getElementById('messages').innerHTML='';
+  document.getElementById('typing-indicator').classList.add('hidden');
   loadHistory('room',roomId);
-  document.querySelectorAll('#room-list li').forEach(function(li){li.classList.toggle('active-target',li.textContent==='# '+roomName);});
   renderFriendList();
+  loadRooms();
 }
 
 function showCreateRoom(){
@@ -306,8 +604,8 @@ function showCreateRoom(){
   }else{
     myFriends.forEach(function(u){
       var label=document.createElement('label');
-      label.style.cssText='display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:.88rem';
-      label.innerHTML='<input type="checkbox" value="'+esc(u)+'"> '+esc(u);
+      label.style.cssText='display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:.88rem';
+      label.innerHTML='<input type="checkbox" value="'+esc(u)+'"> '+avatarHtml(u,'22px')+' '+esc(u);
       fl.appendChild(label);
     });
   }
@@ -329,13 +627,11 @@ async function createRoom(){
   await Promise.all(checked.map(function(u){
     return fetch('/api/rooms/'+room.id+'/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u})});
   }));
-  document.getElementById('room-name').value='';
   hideCreateRoom();
   loadRooms();
 }
 
 // ─── Calls ────────────────────────────────────────────────────────────────
-
 async function startCall(target,withVideo){
   callTarget=target;
   localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:withVideo});
@@ -377,19 +673,44 @@ async function acceptCall(){
 
 function rejectCall(){stompClient.send('/app/call.end',{},JSON.stringify({type:'CALL_REJECT',sender:currentUser.username,receiver:incomingOffer.sender,content:''}));document.getElementById('call-overlay').classList.add('hidden');incomingOffer=null;}
 function hangUp(){stompClient.send('/app/call.end',{},JSON.stringify({type:'CALL_END',sender:currentUser.username,receiver:callTarget,content:''}));endCallCleanup();}
-function endCallCleanup(){if(localStream){localStream.getTracks().forEach(function(t){t.stop();});}localStream=null;if(peerConn)peerConn.close();peerConn=null;callTarget=null;incomingOffer=null;document.getElementById('call-screen').classList.add('hidden');document.getElementById('call-overlay').classList.add('hidden');document.getElementById('remote-video').srcObject=null;document.getElementById('local-video').srcObject=null;}
+
+async function toggleScreenShare(){
+  if(!peerConn)return;
+  if(screenStream){
+    screenStream.getTracks().forEach(function(t){t.stop();});screenStream=null;
+    var vs=peerConn.getSenders().find(function(s){return s.track&&s.track.kind==='video';});
+    if(vs&&localStream){var ct=localStream.getVideoTracks()[0];if(ct)vs.replaceTrack(ct);}
+    return;
+  }
+  try{
+    screenStream=await navigator.mediaDevices.getDisplayMedia({video:true});
+    var st=screenStream.getVideoTracks()[0];
+    var vs=peerConn.getSenders().find(function(s){return s.track&&s.track.kind==='video';});
+    if(vs)vs.replaceTrack(st);
+    st.onended=function(){toggleScreenShare();};
+  }catch(ex){}
+}
+
+function endCallCleanup(){
+  if(localStream){localStream.getTracks().forEach(function(t){t.stop();});}
+  if(screenStream){screenStream.getTracks().forEach(function(t){t.stop();});screenStream=null;}
+  localStream=null;if(peerConn)peerConn.close();peerConn=null;callTarget=null;incomingOffer=null;
+  document.getElementById('call-screen').classList.add('hidden');
+  document.getElementById('call-overlay').classList.add('hidden');
+  document.getElementById('remote-video').srcObject=null;
+  document.getElementById('local-video').srcObject=null;
+}
 function toggleMute(){if(!localStream)return;localStream.getAudioTracks().forEach(function(t){t.enabled=!t.enabled;});}
 function toggleCamera(){if(!localStream)return;localStream.getVideoTracks().forEach(function(t){t.enabled=!t.enabled;});}
 
 // ─── Logout ───────────────────────────────────────────────────────────────
-
 async function logout(){
   if(stompClient){stompClient.send('/app/chat.leave',{},JSON.stringify({type:'LOGOUT',sender:currentUser.username,receiver:null,content:''}));stompClient.disconnect();}
   await fetch('/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});
   sessionStorage.removeItem('user');window.location.href='index.html';
 }
 
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 connect();
 </script>
 </body>
