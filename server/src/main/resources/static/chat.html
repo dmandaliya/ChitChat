@@ -74,6 +74,7 @@
       <span>Friends</span>
       <button class="btn-new-room" onclick="showAddFriend()" title="Add friend">+</button>
     </div>
+    <div id="friend-requests-section" style="display:none;padding:4px 12px 0"></div>
     <ul id="user-list" class="user-list"></ul>
 
     <div class="sidebar-section-title" style="display:flex;align-items:center;justify-content:space-between;padding-right:10px">
@@ -245,7 +246,9 @@ function connect(){
     stompClient.subscribe('/user/queue/call',function(m){handleCallSignal(JSON.parse(m.body));});
     stompClient.send('/app/chat.join',{},JSON.stringify({type:'LOGIN',sender:currentUser.username,receiver:null,content:''}));
     loadFriends();
+    loadFriendRequests();
     loadRooms();
+    setInterval(loadFriendRequests,15000);
   });
 }
 
@@ -343,9 +346,40 @@ async function addFriend(){
   if(!friendUsername){err.textContent='Enter a username.';return;}
   if(friendUsername===currentUser.username){err.textContent='You cannot add yourself.';return;}
   err.textContent='';
-  var res=await fetch('/api/users/'+currentUser.username+'/friends',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({friendUsername:friendUsername})});
-  if(res.ok){hideAddFriend();await loadFriends();}
-  else{var d=await res.json();err.textContent=d.error||'User not found.';}
+  var res=await fetch('/api/users/'+currentUser.username+'/friend-requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUsername:friendUsername})});
+  if(res.ok){err.style.color='#22c55e';err.textContent='Friend request sent!';setTimeout(hideAddFriend,1200);}
+  else{err.style.color='';var d=await res.json();err.textContent=d.error||'User not found.';}
+}
+
+async function loadFriendRequests(){
+  try{
+    var res=await fetch('/api/users/'+currentUser.username+'/friend-requests');
+    if(!res.ok)return;
+    var requests=await res.json();
+    var section=document.getElementById('friend-requests-section');
+    if(!requests||requests.length===0){section.style.display='none';return;}
+    section.style.display='block';
+    section.innerHTML='<div style="font-size:.72rem;color:var(--text-muted);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Requests</div>'+
+      requests.map(function(u){
+        return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">'+
+          avatarHtml(u.username,'28px')+
+          '<span style="flex:1;font-size:.82rem;font-weight:500">'+esc(u.username)+'</span>'+
+          '<button onclick="acceptRequest(\''+esc(u.username)+'\')" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:2px 8px;font-size:.75rem;cursor:pointer">✓</button>'+
+          '<button onclick="rejectRequest(\''+esc(u.username)+'\')" style="background:var(--gray);color:var(--ink);border:none;border-radius:6px;padding:2px 8px;font-size:.75rem;cursor:pointer;margin-left:2px">✕</button>'+
+        '</div>';
+      }).join('');
+  }catch(ex){}
+}
+
+async function acceptRequest(requesterUsername){
+  await fetch('/api/users/'+currentUser.username+'/friend-requests/accept',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterUsername:requesterUsername})});
+  await loadFriendRequests();
+  await loadFriends();
+}
+
+async function rejectRequest(requesterUsername){
+  await fetch('/api/users/'+currentUser.username+'/friend-requests/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requesterUsername:requesterUsername})});
+  await loadFriendRequests();
 }
 
 // ─── Typing indicator ─────────────────────────────────────────────────────
