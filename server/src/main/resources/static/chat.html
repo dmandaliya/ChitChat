@@ -397,7 +397,7 @@ function insertEmoji(emoji){
 
 // ─── Connect ──────────────────────────────────────────────────────────────
 function connect(){
-  var socket=new SockJS('/ws');
+  var socket=new SockJS('/ws?username='+encodeURIComponent(currentUser.username));
   stompClient=Stomp.over(socket);
   stompClient.debug=null;
   stompClient.connect({login:currentUser.username},function(){
