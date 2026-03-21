@@ -1,10 +1,14 @@
 package com.chitchat.server.controller;
 
 import com.chitchat.server.model.ChatMessage;
+import com.chitchat.server.model.MessageReaction;
+import com.chitchat.server.repository.MessageReactionRepository;
 import com.chitchat.server.service.ChatMessageService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/messages")
@@ -12,9 +16,23 @@ import java.util.List;
 public class MessageHistoryController {
 
     private final ChatMessageService chatMessageService;
+    private final MessageReactionRepository reactionRepository;
 
-    public MessageHistoryController(ChatMessageService chatMessageService) {
+    public MessageHistoryController(ChatMessageService chatMessageService,
+                                    MessageReactionRepository reactionRepository) {
         this.chatMessageService = chatMessageService;
+        this.reactionRepository = reactionRepository;
+    }
+
+    @PostMapping("/{id}/react")
+    public ResponseEntity<?> addReaction(@PathVariable String id,
+                                         @RequestBody Map<String, String> body) {
+        MessageReaction reaction = new MessageReaction();
+        reaction.setMessageId(id);
+        reaction.setUsername(body.get("username"));
+        reaction.setEmoji(body.get("emoji"));
+        reactionRepository.save(reaction);
+        return ResponseEntity.ok(Map.of("message", "Reaction added"));
     }
 
     @GetMapping("/public")

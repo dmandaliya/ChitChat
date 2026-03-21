@@ -116,6 +116,29 @@ public class UserController {
         }
     }
 
+    // ── Search ─────────────────────────────────────────────────────────────────
+
+    @GetMapping("/search")
+    public ResponseEntity<?> searchUsers(@RequestParam String q) {
+        List<Map<String, String>> result = userService.searchUsers(q).stream()
+                .map(u -> Map.of("username", u.getUsername(), "fname", u.getFname(), "lname", u.getLname()))
+                .toList();
+        return ResponseEntity.ok(result);
+    }
+
+    // ── Profile ─────────────────────────────────────────────────────────────────
+
+    @GetMapping("/{username}/profile")
+    public ResponseEntity<?> getProfile(@PathVariable String username) {
+        UserEntity user = userService.findByUsername(username);
+        return ResponseEntity.ok(Map.of(
+                "username", user.getUsername(),
+                "fname", user.getFname(),
+                "lname", user.getLname(),
+                "lastSeen", user.getLastOnline() != null ? user.getLastOnline() : ""
+        ));
+    }
+
     // ── Preferences ────────────────────────────────────────────────────────────
 
     @GetMapping("/{username}/preferences")

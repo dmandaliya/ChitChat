@@ -3,6 +3,8 @@ package com.chitchat.server.model;
 import com.chitchat.shared.MessageType;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "chat_messages")
@@ -22,6 +24,10 @@ public class ChatMessage {
     private String content;
 
     private LocalDateTime timestamp;
+
+    @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name = "message_id", referencedColumnName = "id", insertable = false, updatable = false)
+    private List<MessageReaction> reactions = new ArrayList<>();
 
     public ChatMessage() {}
 
@@ -45,4 +51,6 @@ public class ChatMessage {
 
     public LocalDateTime getTimestamp() { return timestamp; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+
+    public List<MessageReaction> getReactions() { return reactions; }
 }

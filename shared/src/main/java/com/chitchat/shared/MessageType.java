@@ -15,5 +15,6 @@ public enum MessageType {
     CALL_ICE,
     CALL_END,
     CALL_REJECT,
+    TYPING,
     ERROR
 }

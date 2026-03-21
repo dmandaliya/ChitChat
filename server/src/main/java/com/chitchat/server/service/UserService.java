@@ -82,4 +82,8 @@ public class UserService {
     public List<UserEntity> getBlockedUsers(String username) {
         return findByUsername(username).getBlockedList();
     }
+
+    public List<UserEntity> searchUsers(String q) {
+        return userRepository.searchByUsernameOrName(q);
+    }
 }

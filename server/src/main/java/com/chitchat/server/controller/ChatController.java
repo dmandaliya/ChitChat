@@ -1,13 +1,16 @@
 package com.chitchat.server.controller;
 
 import com.chitchat.server.service.ChatMessageService;
+import com.chitchat.server.service.UserService;
 import com.chitchat.shared.Message;
 import com.chitchat.shared.MessageType;
+import org.springframework.context.event.EventListener;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 import java.util.Map;
 import java.util.UUID;
@@ -18,6 +21,7 @@ public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatMessageService chatMessageService;
+    private final UserService userService;
 
     // username -> sessionId
     private final Map<String, String> onlineUsers = new ConcurrentHashMap<>();
@@ -25,9 +29,12 @@ public class ChatController {
     // messageId -> sender (for read receipts)
     private final Map<String, String> messageSenders = new ConcurrentHashMap<>();
 
-    public ChatController(SimpMessagingTemplate messagingTemplate, ChatMessageService chatMessageService) {
+    public ChatController(SimpMessagingTemplate messagingTemplate,
+                          ChatMessageService chatMessageService,
+                          UserService userService) {
         this.messagingTemplate = messagingTemplate;
         this.chatMessageService = chatMessageService;
+        this.userService = userService;
     }
 
     // ───── Presence ─────────────────────────────────────────────────────────
@@ -128,6 +135,29 @@ public class ChatController {
         String target = message.getReceiver();
         if (target == null) return;
         messagingTemplate.convertAndSendToUser(target, "/queue/call", (Object) message);
+    }
+
+    // ───── Typing Indicator ──────────────────────────────────────────────────
+
+    @MessageMapping("/chat.typing")
+    public void typingIndicator(@Payload Message message) {
+        String receiver = message.getReceiver();
+        if (receiver == null) return;
+        messagingTemplate.convertAndSendToUser(receiver, "/queue/private", (Object) message);
+    }
+
+    // ───── Disconnect ────────────────────────────────────────────────────────
+
+    @EventListener
+    public void handleDisconnect(SessionDisconnectEvent event) {
+        SimpMessageHeaderAccessor headerAccessor = SimpMessageHeaderAccessor.wrap(event.getMessage());
+        Map<String, Object> attrs = headerAccessor.getSessionAttributes();
+        if (attrs == null) return;
+        String username = (String) attrs.get("username");
+        if (username == null) return;
+        onlineUsers.remove(username);
+        broadcastUserList();
+        userService.logout(username);
     }
 
     // ───── Helpers ───────────────────────────────────────────────────────────
