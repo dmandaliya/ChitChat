@@ -575,11 +575,15 @@ function sendMessage(e){
   document.getElementById('msg-input').value='';
   if(chatMode.startsWith('private:')){
     var target=chatMode.split(':')[1];
-    stompClient.send('/app/chat.sendPrivate',{},JSON.stringify({type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:content}));
+    var msg={type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:content,timestamp:new Date().toISOString()};
+    displayMessage(msg);
+    stompClient.send('/app/chat.sendPrivate',{},JSON.stringify(msg));
     updateLastMsg(chatMode,content);
   }else if(chatMode.startsWith('room:')){
     var parts=chatMode.split(':');
-    stompClient.send('/app/chat.sendRoom',{},JSON.stringify({type:'ROOM_MESSAGE',sender:currentUser.username,receiver:null,roomId:parts[1],content:content}));
+    var msg={type:'ROOM_MESSAGE',sender:currentUser.username,receiver:null,roomId:parts[1],content:content,timestamp:new Date().toISOString()};
+    displayMessage(msg);
+    stompClient.send('/app/chat.sendRoom',{},JSON.stringify(msg));
   }
 }
 
@@ -600,7 +604,7 @@ function handleMessage(msg){
     renderFriendList();
     loadRooms();
   }
-  if(convKey===chatMode||msg.sender===currentUser.username){
+  if(convKey===chatMode&&msg.sender!==currentUser.username){
     displayMessage(msg);
   }
   if(msg.id&&msg.sender!==currentUser.username){
