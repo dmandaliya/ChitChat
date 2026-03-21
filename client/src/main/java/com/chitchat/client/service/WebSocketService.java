@@ -48,8 +48,8 @@ public class WebSocketService {
 
                 @Override
                 public void onOpen(ServerHandshake handshake) {
-                    // Send STOMP CONNECT frame
-                    send("CONNECT\naccept-version:1.2\nheart-beat:0,0\n\n\u0000");
+                    // Send STOMP CONNECT frame with username so server can route messages
+                    send("CONNECT\naccept-version:1.2\nheart-beat:0,0\nlogin:" + username + "\n\n\u0000");
                 }
 
                 @Override
@@ -77,7 +77,7 @@ public class WebSocketService {
         if (frame.startsWith("CONNECTED")) {
             // STOMP connected — subscribe and join
             wsClient.send("SUBSCRIBE\nid:sub-public\ndestination:/topic/public\n\n\u0000");
-            wsClient.send("SUBSCRIBE\nid:sub-private\ndestination=/user/queue/private\n\n\u0000");
+            wsClient.send("SUBSCRIBE\nid:sub-private\ndestination:/user/queue/private\n\n\u0000");
             wsClient.send("SUBSCRIBE\nid:sub-users\ndestination:/topic/users\n\n\u0000");
             // Send join message
             sendMessage(new com.chitchat.shared.Message(

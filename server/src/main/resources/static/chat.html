@@ -400,7 +400,7 @@ function connect(){
   var socket=new SockJS('/ws');
   stompClient=Stomp.over(socket);
   stompClient.debug=null;
-  stompClient.connect({},function(){
+  stompClient.connect({login:currentUser.username},function(){
     stompClient.subscribe('/user/queue/private',function(m){handleMessage(JSON.parse(m.body));});
     stompClient.subscribe('/user/queue/receipts',function(m){handleReceipt(JSON.parse(m.body));});
     stompClient.subscribe('/topic/users',function(m){updateOnlineUsers(JSON.parse(m.body).content);});
