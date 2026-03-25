@@ -131,6 +131,39 @@
 /* ===== Chat Screen ===== */
 .chat-root { -fx-background-color: #e8f1f2; }
 
+/* Preference variants */
+.chat-root.pref-dark {
+  -fx-background-color: #111827;
+}
+.chat-root.pref-dark .chat-main {
+  -fx-background-color: #0f172a;
+}
+.chat-root.pref-dark .chat-header,
+.chat-root.pref-dark .message-bar {
+  -fx-background-color: #1f2937;
+  -fx-border-color: #334155;
+}
+.chat-root.pref-dark .chat-header-title,
+.chat-root.pref-dark .msg-theirs,
+.chat-root.pref-dark .msg-time,
+.chat-root.pref-dark .msg-sender {
+  -fx-text-fill: #e5e7eb;
+}
+.chat-root.pref-dark .msg-input {
+  -fx-background-color: #0f172a;
+  -fx-text-fill: #e5e7eb;
+  -fx-border-color: #334155;
+}
+
+.chat-root.pref-bubble-blue .msg-mine { -fx-background-color: #4c6fff; -fx-text-fill: white; }
+.chat-root.pref-bubble-teal .msg-mine { -fx-background-color: #0f766e; -fx-text-fill: white; }
+.chat-root.pref-bubble-orange .msg-mine { -fx-background-color: #ea580c; -fx-text-fill: white; }
+.chat-root.pref-bubble-pink .msg-mine { -fx-background-color: #db2777; -fx-text-fill: white; }
+
+.chat-root.pref-font-sm { -fx-font-size: 12px; }
+.chat-root.pref-font-md { -fx-font-size: 13px; }
+.chat-root.pref-font-lg { -fx-font-size: 15px; }
+
 /* ===== Sidebar ===== */
 .sidebar {
   -fx-background-color: #1c1c1c;

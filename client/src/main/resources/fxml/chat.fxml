@@ -6,6 +6,7 @@
 <?import javafx.scene.shape.Circle?>
 
 <HBox xmlns:fx="http://javafx.com/fxml"
+  fx:id="chatRoot"
       fx:controller="com.chitchat.client.controller.ChatController"
       styleClass="chat-root">
 

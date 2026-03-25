@@ -57,6 +57,7 @@ import javafx.util.Duration;
 
 public class ChatController implements Initializable {
 
+    @FXML private HBox chatRoot;
     @FXML private Label userInfoLabel;
     @FXML private Label chatHeaderLabel;
     @FXML private ListView<String> userListView;
@@ -92,6 +93,7 @@ public class ChatController implements Initializable {
     private final Map<String, String> roomDisplayToId = new HashMap<>();
     private boolean loadingHistory = false;
     private String activeCallTarget = null;
+    private UserPreferences activePreferences = new UserPreferences();
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -173,6 +175,7 @@ public class ChatController implements Initializable {
         loadFriends();
         loadRooms();
         loadPublicHistory();
+        loadAndApplyPreferences();
     }
 
     @FXML
@@ -312,12 +315,14 @@ public class ChatController implements Initializable {
             meta.getChildren().add(time);
 
             if (isPrivate && isMine && msg.getId() != null && !msg.getId().isBlank()) {
-                Label status = receiptStatusByMessageId.computeIfAbsent(msg.getId(), k -> {
-                    Label l = new Label("Sent");
-                    l.getStyleClass().add("msg-status");
-                    return l;
-                });
-                meta.getChildren().add(status);
+                if (activePreferences.isShowReadReceipts()) {
+                    Label status = receiptStatusByMessageId.computeIfAbsent(msg.getId(), k -> {
+                        Label l = new Label("Sent");
+                        l.getStyleClass().add("msg-status");
+                        return l;
+                    });
+                    meta.getChildren().add(status);
+                }
             }
 
             bubble.getChildren().add(meta);
@@ -364,6 +369,9 @@ public class ChatController implements Initializable {
     }
 
     private void handleReadReceipt(Message msg) {
+        if (!activePreferences.isShowReadReceipts()) {
+            return;
+        }
         if (msg.getContent() == null || msg.getContent().isBlank()) {
             return;
         }
@@ -399,6 +407,9 @@ public class ChatController implements Initializable {
     }
 
     private void sendReadReceipt(String messageId) {
+        if (!activePreferences.isShowReadReceipts()) {
+            return;
+        }
         if (loadingHistory || messageId == null || messageId.isBlank()) {
             return;
         }
@@ -1230,7 +1241,9 @@ public class ChatController implements Initializable {
         for (String username : ordered) {
             int unread = friendUnread.getOrDefault(username, 0);
             boolean online = friendOnline.getOrDefault(username, false);
-            String display = username + (online ? " ●" : "") + (unread > 0 ? " (" + unread + ")" : "");
+            String display = username
+                    + (activePreferences.isOnlineStatus() ? (online ? " ●" : "") : "")
+                    + (unread > 0 ? " (" + unread + ")" : "");
             friendDisplayToUsername.put(display, username);
             userListView.getItems().add(display);
             if (selectedUser != null && selectedUser.equals(username)) {
@@ -1340,6 +1353,10 @@ public class ChatController implements Initializable {
         CheckBox onlineStatus = new CheckBox("Show online status");
         onlineStatus.setSelected(effective.isOnlineStatus());
 
+        ComboBox<String> fontSize = new ComboBox<>();
+        fontSize.getItems().addAll("Small", "Medium", "Large");
+        fontSize.setValue(effective.getFontSize() <= 1 ? "Small" : (effective.getFontSize() >= 3 ? "Large" : "Medium"));
+
         ComboBox<String> bubbleColour = new ComboBox<>();
         bubbleColour.getItems().addAll("blue", "teal", "orange", "pink");
         bubbleColour.setValue(effective.getBubbleColour() != null ? effective.getBubbleColour() : "blue");
@@ -1349,6 +1366,8 @@ public class ChatController implements Initializable {
                 showReceipts,
                 notifications,
                 onlineStatus,
+                new Label("Font size"),
+                fontSize,
                 new Label("Bubble colour"),
                 bubbleColour);
         dialog.getDialogPane().setContent(content);
@@ -1366,7 +1385,7 @@ public class ChatController implements Initializable {
             updated.setNotis(notifications.isSelected());
             updated.setOnlineStatus(onlineStatus.isSelected());
             updated.setLastSeen(effective.isLastSeen());
-            updated.setFontSize(effective.getFontSize());
+            updated.setFontSize("Small".equals(fontSize.getValue()) ? 1 : ("Large".equals(fontSize.getValue()) ? 3 : 2));
             updated.setFontStyle(effective.getFontStyle());
             updated.setBubbleColour(bubbleColour.getValue());
             updated.setStatus(effective.getStatus());
@@ -1377,6 +1396,7 @@ public class ChatController implements Initializable {
                 try {
                     apiService.updatePreferences(username, updated);
                     Platform.runLater(() -> {
+                        applyPreferences(updated);
                         dialog.close();
                         showInfo("Preferences updated");
                     });
@@ -1387,6 +1407,57 @@ public class ChatController implements Initializable {
         });
 
         dialog.showAndWait();
+    }
+
+    private void loadAndApplyPreferences() {
+        String username = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                UserPreferences prefs = apiService.getPreferences(username);
+                Platform.runLater(() -> applyPreferences(prefs));
+            } catch (IOException ignored) {
+                Platform.runLater(() -> applyPreferences(new UserPreferences()));
+            }
+        });
+    }
+
+    private void applyPreferences(UserPreferences prefs) {
+        activePreferences = prefs != null ? prefs : new UserPreferences();
+
+        chatRoot.getStyleClass().removeAll(
+                "pref-dark",
+                "pref-bubble-blue",
+                "pref-bubble-teal",
+                "pref-bubble-orange",
+                "pref-bubble-pink",
+                "pref-font-sm",
+                "pref-font-md",
+                "pref-font-lg");
+
+        if (activePreferences.isDarkMode()) {
+            chatRoot.getStyleClass().add("pref-dark");
+        }
+
+        String bubble = activePreferences.getBubbleColour() != null
+                ? activePreferences.getBubbleColour().toLowerCase()
+                : "blue";
+        switch (bubble) {
+            case "teal" -> chatRoot.getStyleClass().add("pref-bubble-teal");
+            case "orange" -> chatRoot.getStyleClass().add("pref-bubble-orange");
+            case "pink" -> chatRoot.getStyleClass().add("pref-bubble-pink");
+            default -> chatRoot.getStyleClass().add("pref-bubble-blue");
+        }
+
+        int size = activePreferences.getFontSize();
+        if (size <= 1) {
+            chatRoot.getStyleClass().add("pref-font-sm");
+        } else if (size >= 3) {
+            chatRoot.getStyleClass().add("pref-font-lg");
+        } else {
+            chatRoot.getStyleClass().add("pref-font-md");
+        }
+
+        renderFriendList();
     }
 
     private void showBlockedUsersDialog(List<Map<String, Object>> blocked) {
