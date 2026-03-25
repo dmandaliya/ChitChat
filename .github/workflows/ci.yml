@@ -23,17 +23,10 @@ jobs:
           cache: maven
 
       - name: Build shared module
-        run: mvn -pl shared install -DskipTests --no-transfer-progress
+        run: mvn -N install -DskipTests --no-transfer-progress && mvn -pl shared install -DskipTests --no-transfer-progress
 
       - name: Build & test server module
         run: mvn -pl server test --no-transfer-progress
-        env:
-          SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb
-          SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
-          SPRING_DATASOURCE_USERNAME: sa
-          SPRING_DATASOURCE_PASSWORD:
-          SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
-          SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.H2Dialect
 
       - name: Package server JAR
         run: mvn -pl shared,server package -DskipTests --no-transfer-progress
