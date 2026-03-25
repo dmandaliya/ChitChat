@@ -771,12 +771,8 @@ function viewImage(src){
 
 // ─── Chat mode ────────────────────────────────────────────────────────────
 function setPrivateChat(username){
-  if(chatMode==='private:'+username){
-    chatMode='';
-    setHeaderEmpty();
-    document.getElementById('messages').innerHTML=emptyStateHtml();
-    document.getElementById('typing-indicator').classList.add('hidden');
-  }else{
+  if(chatMode==='private:'+username) return;
+  {
     chatMode='private:'+username;
     unreadCounts['private:'+username]=0;
     var isOnline=onlineSet.has(username);
