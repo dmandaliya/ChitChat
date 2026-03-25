@@ -1,7 +1,8 @@
 package com.chitchat.client.controller;
 
-import java.io.IOException;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
@@ -14,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
-import java.io.File;
 
 import com.chitchat.client.ChatClientApp;
 import com.chitchat.client.model.UserSession;
@@ -31,8 +31,8 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
