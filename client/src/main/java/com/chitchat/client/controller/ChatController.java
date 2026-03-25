@@ -5,6 +5,7 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,14 @@ public class ChatController implements Initializable {
     private final PauseTransition typingDebounce = new PauseTransition(Duration.millis(500));
     private final Map<String, Label> receiptStatusByMessageId = new HashMap<>();
     private final Map<String, List<String>> reactionsByMessageId = new HashMap<>();
+    private final Map<String, String> friendDisplayToUsername = new HashMap<>();
+    private final Map<String, Boolean> friendOnline = new HashMap<>();
+    private final Map<String, Integer> friendUnread = new HashMap<>();
+    private final Map<String, LocalDateTime> friendLastActivity = new HashMap<>();
+    private final List<String> friendUsernames = new ArrayList<>();
+    private final Map<String, String> roomIdToName = new HashMap<>();
+    private final Map<String, Integer> roomUnread = new HashMap<>();
+    private final Map<String, LocalDateTime> roomLastActivity = new HashMap<>();
     private String privateTarget = null;
     private String roomTarget = null;
     private final Map<String, String> roomDisplayToId = new HashMap<>();
@@ -79,7 +88,9 @@ public class ChatController implements Initializable {
 
         // Click on user in list to open private chat
         userListView.setOnMouseClicked(e -> {
-            String selected = userListView.getSelectionModel().getSelectedItem();
+            String selectedDisplay = userListView.getSelectionModel().getSelectedItem();
+            if (selectedDisplay == null) return;
+            String selected = friendDisplayToUsername.get(selectedDisplay);
             if (selected == null || selected.equals(session.getUsername())) return;
 
             if (selected.equals(privateTarget)) {
@@ -91,12 +102,14 @@ public class ChatController implements Initializable {
                 updateCallControls();
             } else {
                 privateTarget = selected;
+                friendUnread.put(privateTarget, 0);
                 roomTarget = null;
                 roomListView.getSelectionModel().clearSelection();
                 chatHeaderLabel.setText("Private: @" + privateTarget);
                 clearTypingIndicator();
                 loadPrivateHistory(privateTarget);
                 updateCallControls();
+                renderFriendList();
             }
         });
 
@@ -115,6 +128,7 @@ public class ChatController implements Initializable {
                 updateCallControls();
             } else {
                 roomTarget = roomId;
+                roomUnread.put(roomTarget, 0);
                 privateTarget = null;
                 userListView.getSelectionModel().clearSelection();
                 chatHeaderLabel.setText("Room: #" + selected);
@@ -123,6 +137,7 @@ public class ChatController implements Initializable {
                 clearTypingIndicator();
                 loadRoomHistory(roomId);
                 updateCallControls();
+                renderRoomList();
             }
         });
 
@@ -185,6 +200,8 @@ public class ChatController implements Initializable {
             handleCallSignal(msg);
             return;
         }
+
+        trackMessageActivity(msg);
 
         if (!shouldDisplayMessage(msg)) {
             return;
@@ -451,11 +468,15 @@ public class ChatController implements Initializable {
     }
 
     private void updateUserList(String csv) {
-        userListView.getItems().clear();
-        if (csv == null || csv.isBlank()) return;
-        for (String u : csv.split(",")) {
-            if (!u.isBlank()) userListView.getItems().add(u.trim());
+        friendOnline.clear();
+        if (csv != null && !csv.isBlank()) {
+            for (String u : csv.split(",")) {
+                if (!u.isBlank()) {
+                    friendOnline.put(u.trim(), true);
+                }
+            }
         }
+        renderFriendList();
     }
 
     @FXML
@@ -551,17 +572,17 @@ public class ChatController implements Initializable {
             try {
                 List<Map<String, Object>> friends = apiService.getFriends(username);
                 Platform.runLater(() -> {
-                    String selected = userListView.getSelectionModel().getSelectedItem();
-                    userListView.getItems().clear();
+                    friendUsernames.clear();
                     for (Map<String, Object> friend : friends) {
                         Object friendUsername = friend.get("username");
                         if (friendUsername != null) {
-                            userListView.getItems().add(friendUsername.toString());
+                            String name = friendUsername.toString();
+                            friendUsernames.add(name);
+                            friendUnread.putIfAbsent(name, 0);
+                            friendLastActivity.putIfAbsent(name, LocalDateTime.MIN);
                         }
                     }
-                    if (selected != null) {
-                        userListView.getSelectionModel().select(selected);
-                    }
+                    renderFriendList();
                 });
             } catch (IOException ignored) {
                 // WS online list still provides a usable fallback list.
@@ -575,9 +596,7 @@ public class ChatController implements Initializable {
             try {
                 List<Map<String, Object>> rooms = apiService.getRooms();
                 Platform.runLater(() -> {
-                    String selected = roomListView.getSelectionModel().getSelectedItem();
-                    roomDisplayToId.clear();
-                    roomListView.getItems().clear();
+                    roomIdToName.clear();
 
                     for (Map<String, Object> room : rooms) {
                         Object id = room.get("id");
@@ -595,15 +614,13 @@ public class ChatController implements Initializable {
                             continue;
                         }
 
-                        String display = name.toString();
-                        roomDisplayToId.put(display, id.toString());
-                        roomListView.getItems().add(display);
-                        wsService.subscribeToRoom(id.toString());
+                        String roomId = id.toString();
+                        roomIdToName.put(roomId, name.toString());
+                        roomUnread.putIfAbsent(roomId, 0);
+                        roomLastActivity.putIfAbsent(roomId, LocalDateTime.MIN);
+                        wsService.subscribeToRoom(roomId);
                     }
-
-                    if (selected != null) {
-                        roomListView.getSelectionModel().select(selected);
-                    }
+                    renderRoomList();
                 });
             } catch (IOException ignored) {
                 // Room list is optional for now and can be refreshed by user actions.
@@ -964,6 +981,97 @@ public class ChatController implements Initializable {
                 Platform.runLater(() -> showError("Failed to send request: " + e.getMessage()));
             }
         });
+    }
+
+    private void trackMessageActivity(Message msg) {
+        if (msg == null || msg.getType() == null) {
+            return;
+        }
+
+        String me = UserSession.getInstance().getUsername();
+        LocalDateTime activityTime = msg.getTimestamp() != null ? msg.getTimestamp() : LocalDateTime.now();
+
+        if (msg.getType() == MessageType.PRIVATE_MESSAGE) {
+            String other = me.equals(msg.getSender()) ? msg.getReceiver() : msg.getSender();
+            if (other == null || other.isBlank()) {
+                return;
+            }
+
+            friendLastActivity.put(other, activityTime);
+            if (!me.equals(msg.getSender()) && (privateTarget == null || !privateTarget.equals(other))) {
+                friendUnread.put(other, friendUnread.getOrDefault(other, 0) + 1);
+            }
+            renderFriendList();
+            return;
+        }
+
+        if (msg.getType() == MessageType.ROOM_MESSAGE) {
+            String roomId = msg.getRoomId();
+            if (roomId == null || roomId.isBlank()) {
+                return;
+            }
+
+            roomLastActivity.put(roomId, activityTime);
+            if (!me.equals(msg.getSender()) && (roomTarget == null || !roomTarget.equals(roomId))) {
+                roomUnread.put(roomId, roomUnread.getOrDefault(roomId, 0) + 1);
+            }
+            renderRoomList();
+        }
+    }
+
+    private void renderFriendList() {
+        String selectedUser = privateTarget;
+        friendDisplayToUsername.clear();
+        userListView.getItems().clear();
+
+        List<String> ordered = new ArrayList<>(friendUsernames);
+        ordered.sort(Comparator
+                .comparing((String u) -> friendOnline.getOrDefault(u, false)).reversed()
+                .thenComparing((String u) -> friendLastActivity.getOrDefault(u, LocalDateTime.MIN)).reversed()
+            .thenComparing(u -> u.toLowerCase()));
+
+        String displayToSelect = null;
+        for (String username : ordered) {
+            int unread = friendUnread.getOrDefault(username, 0);
+            boolean online = friendOnline.getOrDefault(username, false);
+            String display = username + (online ? " ●" : "") + (unread > 0 ? " (" + unread + ")" : "");
+            friendDisplayToUsername.put(display, username);
+            userListView.getItems().add(display);
+            if (selectedUser != null && selectedUser.equals(username)) {
+                displayToSelect = display;
+            }
+        }
+
+        if (displayToSelect != null) {
+            userListView.getSelectionModel().select(displayToSelect);
+        }
+    }
+
+    private void renderRoomList() {
+        String selectedRoomId = roomTarget;
+        roomDisplayToId.clear();
+        roomListView.getItems().clear();
+
+        List<String> roomIds = new ArrayList<>(roomIdToName.keySet());
+        roomIds.sort(Comparator
+                .comparing((String id) -> roomLastActivity.getOrDefault(id, LocalDateTime.MIN)).reversed()
+                .thenComparing(id -> roomIdToName.getOrDefault(id, "").toLowerCase()));
+
+        String displayToSelect = null;
+        for (String roomId : roomIds) {
+            String name = roomIdToName.getOrDefault(roomId, roomId);
+            int unread = roomUnread.getOrDefault(roomId, 0);
+            String display = name + (unread > 0 ? " (" + unread + ")" : "");
+            roomDisplayToId.put(display, roomId);
+            roomListView.getItems().add(display);
+            if (selectedRoomId != null && selectedRoomId.equals(roomId)) {
+                displayToSelect = display;
+            }
+        }
+
+        if (displayToSelect != null) {
+            roomListView.getSelectionModel().select(displayToSelect);
+        }
     }
 
     private void processFriendRequestAction(String requester,
