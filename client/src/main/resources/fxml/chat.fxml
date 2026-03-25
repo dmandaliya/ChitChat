@@ -16,6 +16,8 @@
     <HBox styleClass="sidebar-header" alignment="CENTER_LEFT" spacing="8">
       <Label text="ChitChat" styleClass="brand-small"/>
       <Region HBox.hgrow="ALWAYS"/>
+      <Button text="⚙" onAction="#handlePreferences" styleClass="btn-logout" tooltip="Preferences"/>
+      <Button text="⛔" onAction="#handleBlockedUsers" styleClass="btn-logout" tooltip="Blocked Users"/>
       <Button text="&#x1F464;" onAction="#handleProfile" styleClass="btn-logout" tooltip="Profile"/>
       <Button text="&#x2715;" onAction="#handleLogout" styleClass="btn-logout" tooltip="Logout"/>
     </HBox>
@@ -27,6 +29,7 @@
     <HBox alignment="CENTER_LEFT" spacing="6">
       <padding><Insets top="10" right="10" bottom="4" left="10"/></padding>
       <Label text="FRIENDS" styleClass="section-title" HBox.hgrow="ALWAYS"/>
+      <Button text="Req" styleClass="btn-add-friend" onAction="#handleFriendRequests"/>
       <Button text="+ Add" styleClass="btn-add-friend" onAction="#handleAddFriend"/>
     </HBox>
 
@@ -58,6 +61,8 @@
         <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
       </VBox>
     </ScrollPane>
+
+    <Label fx:id="typingIndicatorLabel" styleClass="typing-indicator" visible="false" managed="false"/>
 
     <!-- Input bar -->
     <HBox styleClass="message-bar" spacing="10" alignment="CENTER">

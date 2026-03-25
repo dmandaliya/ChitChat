@@ -226,8 +226,25 @@
 .messages-scroll > .viewport { -fx-background-color: transparent; }
 .messages-box { -fx-background-color: transparent; }
 
+.typing-indicator {
+  -fx-padding: 6 18 4 18;
+  -fx-font-size: 11px;
+  -fx-text-fill: #0f766e;
+  -fx-background-color: rgba(15, 118, 110, 0.08);
+}
+
 /* ===== Message Bubbles ===== */
 .msg-sender { -fx-font-size: 10px; -fx-text-fill: #bdbdbd; -fx-padding: 0 6; }
+.msg-time {
+  -fx-font-size: 10px;
+  -fx-text-fill: #64748b;
+  -fx-padding: 0 4;
+}
+.msg-status {
+  -fx-font-size: 10px;
+  -fx-text-fill: #0f766e;
+  -fx-padding: 0 2;
+}
 .msg-system {
   -fx-text-fill: #bdbdbd;
   -fx-font-size: 11px;

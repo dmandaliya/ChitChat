@@ -86,6 +86,13 @@ public class ApiService {
         return getMap("/api/users/" + username + "/profile");
     }
 
+    public void updateProfile(String username, String status, String bio) throws IOException {
+        put("/api/users/" + username + "/profile", Map.of(
+                "status", status != null ? status : "Online",
+                "bio", bio != null ? bio : ""
+        ));
+    }
+
     public UserPreferences getPreferences(String username) throws IOException {
         return getObject("/api/users/" + username + "/preferences", UserPreferences.class);
     }

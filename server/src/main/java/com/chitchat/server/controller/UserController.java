@@ -131,13 +131,28 @@ public class UserController {
     @GetMapping("/{username}/profile")
     public ResponseEntity<?> getProfile(@PathVariable String username) {
         UserEntity user = userService.findByUsername(username);
+        UserPreferences prefs = user.getPreferences() != null ? user.getPreferences() : new UserPreferences();
         return ResponseEntity.ok(Map.of(
                 "username", user.getUsername(),
                 "fname", user.getFname(),
                 "lname", user.getLname(),
-                "lastSeen", user.getLastOnline() != null ? user.getLastOnline() : ""
+            "lastSeen", user.getLastOnline() != null ? user.getLastOnline() : "",
+            "status", prefs.getStatus() != null ? prefs.getStatus() : "Online",
+            "bio", prefs.getBio() != null ? prefs.getBio() : ""
         ));
     }
+
+        @PutMapping("/{username}/profile")
+        public ResponseEntity<?> updateProfile(@PathVariable String username,
+                           @RequestBody Map<String, String> body) {
+        UserEntity user = userService.findByUsername(username);
+        UserPreferences prefs = user.getPreferences() != null ? user.getPreferences() : new UserPreferences();
+        prefs.setStatus(body.getOrDefault("status", "Online"));
+        prefs.setBio(body.getOrDefault("bio", ""));
+        user.setPreferences(prefs);
+        userService.save(user);
+        return ResponseEntity.ok(Map.of("message", "Profile updated"));
+        }
 
     // ── Preferences ────────────────────────────────────────────────────────────
 

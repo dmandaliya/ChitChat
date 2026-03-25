@@ -2,6 +2,8 @@ package com.chitchat.client.controller;
 
 import java.io.IOException;
 import java.net.URL;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +16,9 @@ import com.chitchat.client.service.ApiService;
 import com.chitchat.client.service.WebSocketService;
 import com.chitchat.shared.Message;
 import com.chitchat.shared.MessageType;
+import com.chitchat.shared.UserPreferences;
 
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -23,6 +27,11 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
@@ -32,6 +41,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 public class ChatController implements Initializable {
 
@@ -42,12 +52,17 @@ public class ChatController implements Initializable {
     @FXML private VBox messagesBox;
     @FXML private ScrollPane messagesScroll;
     @FXML private TextField messageInput;
+    @FXML private Label typingIndicatorLabel;
 
     private final WebSocketService wsService = new WebSocketService();
     private final ApiService apiService = new ApiService(ChatClientApp.SERVER_URL);
+    private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
+    private final PauseTransition typingDebounce = new PauseTransition(Duration.millis(500));
+    private final Map<String, Label> receiptStatusByMessageId = new HashMap<>();
     private String privateTarget = null;
     private String roomTarget = null;
     private final Map<String, String> roomDisplayToId = new HashMap<>();
+    private boolean loadingHistory = false;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -63,11 +78,15 @@ public class ChatController implements Initializable {
                 privateTarget = null;
                 chatHeaderLabel.setText("Public Chat");
                 userListView.getSelectionModel().clearSelection();
+                clearTypingIndicator();
+                loadPublicHistory();
             } else {
                 privateTarget = selected;
                 roomTarget = null;
                 roomListView.getSelectionModel().clearSelection();
                 chatHeaderLabel.setText("Private: @" + privateTarget);
+                clearTypingIndicator();
+                loadPrivateHistory(privateTarget);
             }
         });
 
@@ -81,6 +100,8 @@ public class ChatController implements Initializable {
                 roomTarget = null;
                 chatHeaderLabel.setText("Public Chat");
                 roomListView.getSelectionModel().clearSelection();
+                clearTypingIndicator();
+                loadPublicHistory();
             } else {
                 roomTarget = roomId;
                 privateTarget = null;
@@ -88,15 +109,26 @@ public class ChatController implements Initializable {
                 chatHeaderLabel.setText("Room: #" + selected);
                 wsService.subscribeToRoom(roomId);
                 joinRoomIfNeeded(roomId);
+                clearTypingIndicator();
+                loadRoomHistory(roomId);
             }
         });
 
-        wsService.setOnMessage(msg -> Platform.runLater(() -> displayMessage(msg)));
+        wsService.setOnMessage(msg -> Platform.runLater(() -> handleIncomingMessage(msg)));
         wsService.setOnUserList(csv -> Platform.runLater(() -> updateUserList(csv)));
         wsService.connect(ChatClientApp.SERVER_URL, session.getUsername());
 
+        typingDebounce.setOnFinished(e -> sendTypingIndicator());
+        messageInput.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (privateTarget == null || newVal == null || newVal.isBlank()) {
+                return;
+            }
+            typingDebounce.playFromStart();
+        });
+
         loadFriends();
         loadRooms();
+        loadPublicHistory();
     }
 
     @FXML
@@ -104,6 +136,7 @@ public class ChatController implements Initializable {
         String content = messageInput.getText().trim();
         if (content.isEmpty()) return;
         messageInput.clear();
+        clearTypingIndicator();
 
         UserSession session = UserSession.getInstance();
         Message msg;
@@ -118,7 +151,29 @@ public class ChatController implements Initializable {
         wsService.sendMessage(msg);
     }
 
-    private void displayMessage(Message msg) {
+    private void handleIncomingMessage(Message msg) {
+        if (msg == null || msg.getType() == null) {
+            return;
+        }
+
+        if (msg.getType() == MessageType.TYPING) {
+            handleTypingSignal(msg);
+            return;
+        }
+
+        if (msg.getType() == MessageType.READ_RECEIPT) {
+            handleReadReceipt(msg);
+            return;
+        }
+
+        if (!shouldDisplayMessage(msg)) {
+            return;
+        }
+
+        displayMessage(msg, false);
+    }
+
+    private void displayMessage(Message msg, boolean fromHistory) {
         UserSession session = UserSession.getInstance();
         boolean isMine = msg.getSender().equals(session.getUsername());
         boolean isSystem = "System".equals(msg.getSender());
@@ -155,12 +210,105 @@ public class ChatController implements Initializable {
             if (isPrivate) content.getStyleClass().add("msg-private");
 
             bubble.getChildren().add(content);
+
+            HBox meta = new HBox(6);
+            meta.setAlignment(isMine ? Pos.CENTER_RIGHT : Pos.CENTER_LEFT);
+            Label time = new Label(formatTime(msg.getTimestamp()));
+            time.getStyleClass().add("msg-time");
+            meta.getChildren().add(time);
+
+            if (isPrivate && isMine && msg.getId() != null && !msg.getId().isBlank()) {
+                Label status = receiptStatusByMessageId.computeIfAbsent(msg.getId(), k -> {
+                    Label l = new Label("Sent");
+                    l.getStyleClass().add("msg-status");
+                    return l;
+                });
+                meta.getChildren().add(status);
+            }
+
+            bubble.getChildren().add(meta);
             row.setAlignment(isMine ? Pos.CENTER_RIGHT : Pos.CENTER_LEFT);
             row.getChildren().add(bubble);
+
+            if (!fromHistory && !isMine && isPrivate && msg.getId() != null && !msg.getId().isBlank()) {
+                sendReadReceipt(msg.getId());
+            }
         }
 
         messagesBox.getChildren().add(row);
         messagesScroll.setVvalue(1.0);
+    }
+
+    private boolean shouldDisplayMessage(Message msg) {
+        MessageType type = msg.getType();
+        if (type == MessageType.PUBLIC_MESSAGE) {
+            return privateTarget == null && roomTarget == null;
+        }
+        if (type == MessageType.PRIVATE_MESSAGE) {
+            if (privateTarget == null) {
+                return false;
+            }
+            String me = UserSession.getInstance().getUsername();
+            boolean betweenActiveUsers =
+                    (me.equals(msg.getSender()) && privateTarget.equals(msg.getReceiver()))
+                            || (privateTarget.equals(msg.getSender()) && me.equals(msg.getReceiver()));
+            return betweenActiveUsers;
+        }
+        if (type == MessageType.ROOM_MESSAGE) {
+            return roomTarget != null && roomTarget.equals(msg.getRoomId());
+        }
+        return false;
+    }
+
+    private String formatTime(LocalDateTime timestamp) {
+        if (timestamp == null) {
+            return "";
+        }
+        return timestamp.format(timeFmt);
+    }
+
+    private void handleReadReceipt(Message msg) {
+        if (msg.getContent() == null || msg.getContent().isBlank()) {
+            return;
+        }
+        Label status = receiptStatusByMessageId.get(msg.getContent());
+        if (status != null) {
+            status.setText("Seen");
+        }
+    }
+
+    private void handleTypingSignal(Message msg) {
+        if (privateTarget == null || msg.getSender() == null || !msg.getSender().equals(privateTarget)) {
+            return;
+        }
+        typingIndicatorLabel.setManaged(true);
+        typingIndicatorLabel.setVisible(true);
+        typingIndicatorLabel.setText(privateTarget + " is typing...");
+    }
+
+    private void clearTypingIndicator() {
+        typingIndicatorLabel.setText("");
+        typingIndicatorLabel.setManaged(false);
+        typingIndicatorLabel.setVisible(false);
+    }
+
+    private void sendTypingIndicator() {
+        if (privateTarget == null) {
+            return;
+        }
+        String sender = UserSession.getInstance().getUsername();
+        Message typing = new Message(MessageType.TYPING, sender, privateTarget, "typing");
+        wsService.sendMessage(typing);
+    }
+
+    private void sendReadReceipt(String messageId) {
+        if (loadingHistory || messageId == null || messageId.isBlank()) {
+            return;
+        }
+        String sender = UserSession.getInstance().getUsername();
+        Message receipt = new Message(MessageType.READ_RECEIPT, sender, null, messageId);
+        receipt.setId(messageId);
+        wsService.sendMessage(receipt);
     }
 
     private void updateUserList(String csv) {
@@ -241,6 +389,19 @@ public class ChatController implements Initializable {
                     Platform.runLater(() -> showError("Failed to create room: " + e.getMessage()));
                 }
             });
+        });
+    }
+
+    @FXML
+    private void handleFriendRequests() {
+        String username = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                List<Map<String, Object>> pending = apiService.getPendingFriendRequests(username);
+                Platform.runLater(() -> showFriendRequestsDialog(pending));
+            } catch (IOException e) {
+                Platform.runLater(() -> showError("Failed to load requests: " + e.getMessage()));
+            }
         });
     }
 
@@ -343,6 +504,96 @@ public class ChatController implements Initializable {
         });
     }
 
+    private void loadPublicHistory() {
+        clearMessages();
+        CompletableFuture.runAsync(() -> {
+            try {
+                List<Map<String, Object>> raw = apiService.getPublicMessages();
+                Platform.runLater(() -> renderHistory(raw));
+            } catch (IOException ignored) {
+                // Live stream still works if history endpoint is unavailable.
+            }
+        });
+    }
+
+    private void loadPrivateHistory(String otherUser) {
+        clearMessages();
+        String me = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                List<Map<String, Object>> raw = apiService.getPrivateMessages(me, otherUser);
+                Platform.runLater(() -> renderHistory(raw));
+            } catch (IOException ignored) {
+                // Live stream still works if history endpoint is unavailable.
+            }
+        });
+    }
+
+    private void loadRoomHistory(String roomId) {
+        clearMessages();
+        CompletableFuture.runAsync(() -> {
+            try {
+                List<Map<String, Object>> raw = apiService.getRoomMessages(roomId);
+                Platform.runLater(() -> renderHistory(raw));
+            } catch (IOException ignored) {
+                // Live stream still works if history endpoint is unavailable.
+            }
+        });
+    }
+
+    private void renderHistory(List<Map<String, Object>> rawHistory) {
+        loadingHistory = true;
+        try {
+            if (rawHistory == null) {
+                return;
+            }
+            for (Map<String, Object> raw : rawHistory) {
+                Message msg = toMessage(raw);
+                if (msg != null && shouldDisplayMessage(msg)) {
+                    displayMessage(msg, true);
+                }
+            }
+        } finally {
+            loadingHistory = false;
+        }
+    }
+
+    private Message toMessage(Map<String, Object> raw) {
+        if (raw == null) {
+            return null;
+        }
+        try {
+            Message msg = new Message();
+            msg.setId(stringVal(raw.get("id")));
+            msg.setSender(stringVal(raw.get("sender")));
+            msg.setReceiver(stringVal(raw.get("receiver")));
+            msg.setContent(stringVal(raw.get("content")));
+            msg.setRoomId(stringVal(raw.get("roomId")));
+
+            String typeRaw = stringVal(raw.get("type"));
+            if (typeRaw != null && !typeRaw.isBlank()) {
+                msg.setType(MessageType.valueOf(typeRaw));
+            }
+
+            String tsRaw = stringVal(raw.get("timestamp"));
+            if (tsRaw != null && !tsRaw.isBlank()) {
+                msg.setTimestamp(LocalDateTime.parse(tsRaw));
+            }
+            return msg;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String stringVal(Object value) {
+        return value == null ? null : value.toString();
+    }
+
+    private void clearMessages() {
+        messagesBox.getChildren().clear();
+        receiptStatusByMessageId.clear();
+    }
+
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setHeaderText("Request failed");
@@ -355,5 +606,258 @@ public class ChatController implements Initializable {
         alert.setHeaderText("ChitChat");
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private void showFriendRequestsDialog(List<Map<String, Object>> pending) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Friend Requests");
+        dialog.setHeaderText("Pending requests");
+
+        ListView<String> list = new ListView<>();
+        list.setPrefHeight(220);
+        if (pending != null) {
+            for (Map<String, Object> item : pending) {
+                Object username = item.get("username");
+                if (username != null) {
+                    list.getItems().add(username.toString());
+                }
+            }
+        }
+
+        Label hint = new Label(list.getItems().isEmpty()
+                ? "No pending friend requests."
+                : "Select a request and choose Accept or Reject.");
+
+        VBox content = new VBox(10, hint, list);
+        dialog.getDialogPane().setContent(content);
+
+        ButtonType acceptType = new ButtonType("Accept");
+        ButtonType rejectType = new ButtonType("Reject");
+        ButtonType closeType = ButtonType.CLOSE;
+        dialog.getDialogPane().getButtonTypes().addAll(acceptType, rejectType, closeType);
+
+        Button acceptBtn = (Button) dialog.getDialogPane().lookupButton(acceptType);
+        Button rejectBtn = (Button) dialog.getDialogPane().lookupButton(rejectType);
+        acceptBtn.disableProperty().bind(list.getSelectionModel().selectedItemProperty().isNull());
+        rejectBtn.disableProperty().bind(list.getSelectionModel().selectedItemProperty().isNull());
+
+        acceptBtn.addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
+            e.consume();
+            String requester = list.getSelectionModel().getSelectedItem();
+            if (requester == null) {
+                return;
+            }
+            processFriendRequestAction(requester, true, list, hint);
+        });
+
+        rejectBtn.addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
+            e.consume();
+            String requester = list.getSelectionModel().getSelectedItem();
+            if (requester == null) {
+                return;
+            }
+            processFriendRequestAction(requester, false, list, hint);
+        });
+
+        dialog.showAndWait();
+    }
+
+    private void processFriendRequestAction(String requester,
+                                            boolean accept,
+                                            ListView<String> list,
+                                            Label hint) {
+        String username = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                if (accept) {
+                    apiService.acceptFriendRequest(username, requester);
+                } else {
+                    apiService.rejectFriendRequest(username, requester);
+                }
+                Platform.runLater(() -> {
+                    list.getItems().remove(requester);
+                    if (list.getItems().isEmpty()) {
+                        hint.setText("No pending friend requests.");
+                    }
+                    loadFriends();
+                });
+            } catch (IOException e) {
+                Platform.runLater(() -> showError("Failed to update request: " + e.getMessage()));
+            }
+        });
+    }
+
+    @FXML
+    private void handlePreferences() {
+        String username = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                UserPreferences prefs = apiService.getPreferences(username);
+                Platform.runLater(() -> showPreferencesDialog(prefs));
+            } catch (IOException e) {
+                Platform.runLater(() -> showError("Failed to load preferences: " + e.getMessage()));
+            }
+        });
+    }
+
+    @FXML
+    private void handleBlockedUsers() {
+        String username = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                List<Map<String, Object>> blocked = apiService.getBlockedUsers(username);
+                Platform.runLater(() -> showBlockedUsersDialog(blocked));
+            } catch (IOException e) {
+                Platform.runLater(() -> showError("Failed to load blocked users: " + e.getMessage()));
+            }
+        });
+    }
+
+    private void showPreferencesDialog(UserPreferences prefs) {
+        UserPreferences effective = prefs != null ? prefs : new UserPreferences();
+
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Preferences");
+        dialog.setHeaderText("Chat preferences");
+
+        CheckBox darkMode = new CheckBox("Dark mode");
+        darkMode.setSelected(effective.isDarkMode());
+
+        CheckBox showReceipts = new CheckBox("Show read receipts");
+        showReceipts.setSelected(effective.isShowReadReceipts());
+
+        CheckBox notifications = new CheckBox("Enable notifications");
+        notifications.setSelected(effective.isNotis());
+
+        CheckBox onlineStatus = new CheckBox("Show online status");
+        onlineStatus.setSelected(effective.isOnlineStatus());
+
+        ComboBox<String> bubbleColour = new ComboBox<>();
+        bubbleColour.getItems().addAll("blue", "teal", "orange", "pink");
+        bubbleColour.setValue(effective.getBubbleColour() != null ? effective.getBubbleColour() : "blue");
+
+        VBox content = new VBox(10,
+                darkMode,
+                showReceipts,
+                notifications,
+                onlineStatus,
+                new Label("Bubble colour"),
+                bubbleColour);
+        dialog.getDialogPane().setContent(content);
+
+        ButtonType saveType = new ButtonType("Save");
+        dialog.getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
+
+        Button saveBtn = (Button) dialog.getDialogPane().lookupButton(saveType);
+        saveBtn.addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
+            e.consume();
+
+            UserPreferences updated = new UserPreferences();
+            updated.setDarkMode(darkMode.isSelected());
+            updated.setShowReadReceipts(showReceipts.isSelected());
+            updated.setNotis(notifications.isSelected());
+            updated.setOnlineStatus(onlineStatus.isSelected());
+            updated.setLastSeen(effective.isLastSeen());
+            updated.setFontSize(effective.getFontSize());
+            updated.setFontStyle(effective.getFontStyle());
+            updated.setBubbleColour(bubbleColour.getValue());
+            updated.setStatus(effective.getStatus());
+            updated.setBio(effective.getBio());
+
+            String username = UserSession.getInstance().getUsername();
+            CompletableFuture.runAsync(() -> {
+                try {
+                    apiService.updatePreferences(username, updated);
+                    Platform.runLater(() -> {
+                        dialog.close();
+                        showInfo("Preferences updated");
+                    });
+                } catch (IOException ex) {
+                    Platform.runLater(() -> showError("Failed to save preferences: " + ex.getMessage()));
+                }
+            });
+        });
+
+        dialog.showAndWait();
+    }
+
+    private void showBlockedUsersDialog(List<Map<String, Object>> blocked) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Blocked Users");
+        dialog.setHeaderText("Manage blocked users");
+
+        TextField usernameField = new TextField();
+        usernameField.setPromptText("Username to block");
+
+        ListView<String> blockedList = new ListView<>();
+        blockedList.setPrefHeight(180);
+        if (blocked != null) {
+            for (Map<String, Object> item : blocked) {
+                Object username = item.get("username");
+                if (username != null) {
+                    blockedList.getItems().add(username.toString());
+                }
+            }
+        }
+
+        Label hint = new Label("Select an entry to unblock.");
+        VBox content = new VBox(10,
+                new Label("Block a user"),
+                usernameField,
+                hint,
+                blockedList);
+        dialog.getDialogPane().setContent(content);
+
+        ButtonType blockType = new ButtonType("Block");
+        ButtonType unblockType = new ButtonType("Unblock");
+        dialog.getDialogPane().getButtonTypes().addAll(blockType, unblockType, ButtonType.CLOSE);
+
+        Button blockBtn = (Button) dialog.getDialogPane().lookupButton(blockType);
+        Button unblockBtn = (Button) dialog.getDialogPane().lookupButton(unblockType);
+        blockBtn.disableProperty().bind(usernameField.textProperty().isEmpty());
+        unblockBtn.disableProperty().bind(blockedList.getSelectionModel().selectedItemProperty().isNull());
+
+        blockBtn.addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
+            e.consume();
+            String target = usernameField.getText() != null ? usernameField.getText().trim() : "";
+            if (target.isEmpty()) {
+                return;
+            }
+
+            String username = UserSession.getInstance().getUsername();
+            CompletableFuture.runAsync(() -> {
+                try {
+                    apiService.blockUser(username, target);
+                    Platform.runLater(() -> {
+                        if (!blockedList.getItems().contains(target)) {
+                            blockedList.getItems().add(target);
+                        }
+                        usernameField.clear();
+                    });
+                } catch (IOException ex) {
+                    Platform.runLater(() -> showError("Failed to block user: " + ex.getMessage()));
+                }
+            });
+        });
+
+        unblockBtn.addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
+            e.consume();
+            String target = blockedList.getSelectionModel().getSelectedItem();
+            if (target == null) {
+                return;
+            }
+
+            String username = UserSession.getInstance().getUsername();
+            CompletableFuture.runAsync(() -> {
+                try {
+                    apiService.unblockUser(username, target);
+                    Platform.runLater(() -> blockedList.getItems().remove(target));
+                } catch (IOException ex) {
+                    Platform.runLater(() -> showError("Failed to unblock user: " + ex.getMessage()));
+                }
+            });
+        });
+
+        dialog.showAndWait();
     }
 }
