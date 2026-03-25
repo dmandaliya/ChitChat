@@ -476,28 +476,7 @@ public class ChatController implements Initializable {
 
     @FXML
     private void handleAddFriend() {
-        TextInputDialog dialog = new TextInputDialog();
-        dialog.setTitle("Add Friend");
-        dialog.setHeaderText("Add a friend by username");
-        dialog.setContentText("Username:");
-        dialog.showAndWait().ifPresent(username -> {
-            String target = username.trim();
-            if (target.isEmpty()) {
-                return;
-            }
-            String currentUser = UserSession.getInstance().getUsername();
-            CompletableFuture.runAsync(() -> {
-                try {
-                    apiService.sendFriendRequest(currentUser, target);
-                    Platform.runLater(() -> {
-                        showInfo("Friend request sent to @" + target);
-                        loadFriends();
-                    });
-                } catch (IOException e) {
-                    Platform.runLater(() -> showError("Failed to send request: " + e.getMessage()));
-                }
-            });
-        });
+        showAddFriendDialog();
     }
 
     @FXML
@@ -886,6 +865,105 @@ public class ChatController implements Initializable {
         });
 
         dialog.showAndWait();
+    }
+
+    private void showAddFriendDialog() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Add Friend");
+        dialog.setHeaderText("Search users and send a friend request");
+
+        TextField searchField = new TextField();
+        searchField.setPromptText("Search by username or name");
+
+        ListView<String> resultsList = new ListView<>();
+        resultsList.setPrefHeight(220);
+
+        Label hint = new Label("Type at least 2 characters to search.");
+
+        VBox content = new VBox(10, searchField, hint, resultsList);
+        dialog.getDialogPane().setContent(content);
+
+        ButtonType searchType = new ButtonType("Search");
+        ButtonType sendType = new ButtonType("Send Request");
+        dialog.getDialogPane().getButtonTypes().addAll(searchType, sendType, ButtonType.CLOSE);
+
+        Button searchBtn = (Button) dialog.getDialogPane().lookupButton(searchType);
+        Button sendBtn = (Button) dialog.getDialogPane().lookupButton(sendType);
+
+        searchBtn.disableProperty().bind(searchField.textProperty().length().lessThan(2));
+        sendBtn.disableProperty().bind(resultsList.getSelectionModel().selectedItemProperty().isNull());
+
+        searchBtn.addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
+            e.consume();
+            String query = searchField.getText() != null ? searchField.getText().trim() : "";
+            if (query.length() < 2) {
+                hint.setText("Type at least 2 characters to search.");
+                return;
+            }
+            performUserSearch(query, resultsList, hint);
+        });
+
+        sendBtn.addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
+            e.consume();
+            String selected = resultsList.getSelectionModel().getSelectedItem();
+            if (selected == null) {
+                return;
+            }
+            String username = selected.split("\\s+")[0];
+            sendFriendRequestToTarget(username, dialog);
+        });
+
+        dialog.showAndWait();
+    }
+
+    private void performUserSearch(String query, ListView<String> resultsList, Label hint) {
+        String currentUser = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                List<Map<String, Object>> results = apiService.searchUsers(query);
+                Platform.runLater(() -> {
+                    resultsList.getItems().clear();
+                    for (Map<String, Object> user : results) {
+                        Object username = user.get("username");
+                        if (username == null || currentUser.equals(username.toString())) {
+                            continue;
+                        }
+                        String fname = user.get("fname") != null ? user.get("fname").toString() : "";
+                        String lname = user.get("lname") != null ? user.get("lname").toString() : "";
+                        String fullName = (fname + " " + lname).trim();
+                        if (fullName.isBlank()) {
+                            resultsList.getItems().add(username.toString());
+                        } else {
+                            resultsList.getItems().add(username + "    " + fullName);
+                        }
+                    }
+
+                    if (resultsList.getItems().isEmpty()) {
+                        hint.setText("No users found.");
+                    } else {
+                        hint.setText("Select a user and send a request.");
+                    }
+                });
+            } catch (IOException e) {
+                Platform.runLater(() -> hint.setText("Search failed: " + e.getMessage()));
+            }
+        });
+    }
+
+    private void sendFriendRequestToTarget(String targetUsername, Dialog<ButtonType> dialog) {
+        String currentUser = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                apiService.sendFriendRequest(currentUser, targetUsername);
+                Platform.runLater(() -> {
+                    dialog.close();
+                    showInfo("Friend request sent to @" + targetUsername);
+                    loadFriends();
+                });
+            } catch (IOException e) {
+                Platform.runLater(() -> showError("Failed to send request: " + e.getMessage()));
+            }
+        });
     }
 
     private void processFriendRequestAction(String requester,

@@ -1,20 +1,23 @@
 package com.chitchat.client.controller;
 
-import com.chitchat.client.ChatClientApp;
-import com.chitchat.client.model.UserSession;
-import com.chitchat.client.service.ApiService;
-import javafx.collections.FXCollections;
-import javafx.concurrent.Task;
-import javafx.fxml.FXML;
-import javafx.fxml.Initializable;
-import javafx.scene.control.*;
-import javafx.scene.shape.Circle;
-import javafx.stage.Stage;
-
 import java.io.IOException;
 import java.net.URL;
 import java.util.Map;
 import java.util.ResourceBundle;
+
+import com.chitchat.client.ChatClientApp;
+import com.chitchat.client.model.UserSession;
+import com.chitchat.client.service.ApiService;
+
+import javafx.collections.FXCollections;
+import javafx.concurrent.Task;
+import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.shape.Circle;
+import javafx.stage.Stage;
 
 public class ProfileController implements Initializable {
 

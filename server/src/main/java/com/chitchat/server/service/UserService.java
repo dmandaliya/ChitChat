@@ -1,13 +1,13 @@
 package com.chitchat.server.service;
 
-import com.chitchat.server.model.UserEntity;
-import com.chitchat.server.repository.UserRepository;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
+import com.chitchat.server.model.UserEntity;
+import com.chitchat.server.repository.UserRepository;
 
 @Service
 public class UserService {
