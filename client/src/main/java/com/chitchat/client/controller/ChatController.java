@@ -1,16 +1,20 @@
 package com.chitchat.client.controller;
 
 import java.io.IOException;
+import java.io.ByteArrayInputStream;
 import java.net.URL;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
+import java.io.File;
 
 import com.chitchat.client.ChatClientApp;
 import com.chitchat.client.model.UserSession;
@@ -28,6 +32,7 @@ import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -41,9 +46,12 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -60,9 +68,11 @@ public class ChatController implements Initializable {
     @FXML private Button callVoiceButton;
     @FXML private Button callVideoButton;
     @FXML private Button endCallButton;
+    @FXML private Button attachImageButton;
 
     private final WebSocketService wsService = new WebSocketService();
     private final ApiService apiService = new ApiService(ChatClientApp.SERVER_URL);
+    private static final int MAX_IMAGE_BYTES = 2 * 1024 * 1024;
     private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
     private final PauseTransition typingDebounce = new PauseTransition(Duration.millis(500));
     private final Map<String, Label> receiptStatusByMessageId = new HashMap<>();
@@ -165,6 +175,37 @@ public class ChatController implements Initializable {
         messageInput.clear();
         clearTypingIndicator();
 
+        sendContent(content);
+    }
+
+    @FXML
+    private void handleSendImage() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Select Image");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
+                "Images", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp"));
+
+        Stage stage = (Stage) messageInput.getScene().getWindow();
+        File file = chooser.showOpenDialog(stage);
+        if (file == null) {
+            return;
+        }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                String payload = createImagePayload(file);
+                Platform.runLater(() -> sendContent(payload));
+            } catch (IOException e) {
+                Platform.runLater(() -> showError("Failed to attach image: " + e.getMessage()));
+            }
+        });
+    }
+
+    private void sendContent(String content) {
+        if (content == null || content.isBlank()) {
+            return;
+        }
+
         UserSession session = UserSession.getInstance();
         Message msg;
         if (roomTarget != null) {
@@ -238,15 +279,22 @@ public class ChatController implements Initializable {
                 bubble.getChildren().add(senderLabel);
             }
 
-            Text text = new Text(msg.getContent());
-            text.setWrappingWidth(340);
             Label content = new Label();
-            content.setGraphic(text);
             content.getStyleClass().addAll("msg-bubble",
                     isMine ? "msg-mine" : "msg-theirs");
             if (isPrivate) content.getStyleClass().add("msg-private");
 
-                attachReactionMenu(content, bubble, msg);
+            Node messageNode;
+            if (isImagePayload(msg.getContent())) {
+                messageNode = buildImageNode(msg.getContent());
+            } else {
+                Text text = new Text(msg.getContent());
+                text.setWrappingWidth(340);
+                messageNode = text;
+            }
+            content.setGraphic(messageNode);
+
+            attachReactionMenu(content, bubble, msg);
 
             bubble.getChildren().add(content);
 
@@ -465,6 +513,49 @@ public class ChatController implements Initializable {
 
         endCallButton.setManaged(inCall);
         endCallButton.setVisible(inCall);
+    }
+
+    private boolean isImagePayload(String content) {
+        return content != null && content.startsWith("data:image/") && content.contains(";base64,");
+    }
+
+    private Node buildImageNode(String payload) {
+        try {
+            int comma = payload.indexOf(',');
+            if (comma < 0) {
+                return new Text("[Invalid image payload]");
+            }
+            String base64 = payload.substring(comma + 1);
+            byte[] data = Base64.getDecoder().decode(base64);
+            Image image = new Image(new ByteArrayInputStream(data));
+            ImageView imageView = new ImageView(image);
+            imageView.setFitWidth(220);
+            imageView.setPreserveRatio(true);
+            imageView.getStyleClass().add("msg-image");
+            return imageView;
+        } catch (Exception ex) {
+            return new Text("[Unable to render image]");
+        }
+    }
+
+    private String createImagePayload(File file) throws IOException {
+        byte[] bytes = Files.readAllBytes(file.toPath());
+        if (bytes.length > MAX_IMAGE_BYTES) {
+            throw new IOException("Image must be 2MB or smaller.");
+        }
+
+        String mimeType = Files.probeContentType(file.toPath());
+        if (mimeType == null || !mimeType.startsWith("image/")) {
+            String name = file.getName().toLowerCase();
+            if (name.endsWith(".png")) mimeType = "image/png";
+            else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) mimeType = "image/jpeg";
+            else if (name.endsWith(".gif")) mimeType = "image/gif";
+            else if (name.endsWith(".webp")) mimeType = "image/webp";
+            else mimeType = "image/png";
+        }
+
+        String encoded = Base64.getEncoder().encodeToString(bytes);
+        return "data:" + mimeType + ";base64," + encoded;
     }
 
     private void updateUserList(String csv) {

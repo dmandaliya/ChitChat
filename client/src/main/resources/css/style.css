@@ -303,6 +303,10 @@
   -fx-text-fill: #1c1c1c;
 }
 
+.msg-image {
+  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.18), 10, 0.2, 0, 2);
+}
+
 /* Unread badge */
 .badge-unread {
   -fx-background-color: #ffb3c1;
@@ -340,3 +344,12 @@
   -fx-cursor: hand;
 }
 .btn-send:hover { -fx-background-color: #f5dd00; }
+
+.btn-attach {
+  -fx-background-color: #e8f1f2;
+  -fx-text-fill: #1c1c1c;
+  -fx-background-radius: 24;
+  -fx-padding: 9 12;
+  -fx-cursor: hand;
+}
+.btn-attach:hover { -fx-background-color: #d6e7e9; }
