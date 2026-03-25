@@ -3,6 +3,11 @@ package com.chitchat.client.service;
 import java.net.URI;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.java_websocket.client.WebSocketClient;
@@ -20,6 +25,16 @@ public class WebSocketService {
     private Consumer<Message> onMessage;
     private Consumer<String> onUserList;
     private final Set<String> roomSubscriptions = ConcurrentHashMap.newKeySet();
+    private final ScheduledExecutorService reconnectExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "chitchat-ws-reconnect");
+        t.setDaemon(true);
+        return t;
+    });
+    private final AtomicBoolean reconnectScheduled = new AtomicBoolean(false);
+    private final AtomicInteger reconnectAttempts = new AtomicInteger(0);
+    private volatile boolean manualDisconnect = false;
+    private volatile String lastServerUrl;
+    private volatile String lastUsername;
 
     public WebSocketService() {
         mapper = new ObjectMapper();
@@ -41,6 +56,14 @@ public class WebSocketService {
      * a full STOMP library dependency.
      */
     public void connect(String serverUrl, String username) {
+        lastServerUrl = serverUrl;
+        lastUsername = username;
+        manualDisconnect = false;
+
+        openConnection(serverUrl, username);
+    }
+
+    private synchronized void openConnection(String serverUrl, String username) {
         try {
             // SockJS info endpoint returns a raw WS URL like ws://host/ws/{serverid}/{sessionid}/websocket
             String wsUrl = serverUrl
@@ -64,21 +87,43 @@ public class WebSocketService {
                 @Override
                 public void onClose(int code, String reason, boolean remote) {
                     System.out.println("WebSocket closed: " + reason);
+                    scheduleReconnect();
                 }
 
                 @Override
                 public void onError(Exception ex) {
                     System.err.println("WebSocket error: " + ex.getMessage());
+                    scheduleReconnect();
                 }
             };
             wsClient.connect();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to connect WebSocket", e);
+            scheduleReconnect();
         }
+    }
+
+    private void scheduleReconnect() {
+        if (manualDisconnect || lastServerUrl == null || lastUsername == null) {
+            return;
+        }
+        if (!reconnectScheduled.compareAndSet(false, true)) {
+            return;
+        }
+
+        int attempt = reconnectAttempts.incrementAndGet();
+        long delaySeconds = Math.min(30, 1L << Math.min(attempt - 1, 5));
+        reconnectExecutor.schedule(() -> {
+            reconnectScheduled.set(false);
+            if (manualDisconnect) {
+                return;
+            }
+            openConnection(lastServerUrl, lastUsername);
+        }, delaySeconds, TimeUnit.SECONDS);
     }
 
     private void handleFrame(String frame, String username) {
         if (frame.startsWith("CONNECTED")) {
+            reconnectAttempts.set(0);
             // STOMP connected — subscribe and join
             wsClient.send("SUBSCRIBE\nid:sub-public\ndestination:/topic/public\n\n\u0000");
             wsClient.send("SUBSCRIBE\nid:sub-private\ndestination:/user/queue/private\n\n\u0000");
@@ -147,6 +192,7 @@ public class WebSocketService {
     }
 
     public void disconnect(String username) {
+        manualDisconnect = true;
         sendMessage(new Message(com.chitchat.shared.MessageType.LOGOUT, username, null, ""));
         if (wsClient != null && wsClient.isOpen()) {
             wsClient.send("DISCONNECT\n\n\u0000");

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
@@ -75,6 +76,7 @@ public class ChatController implements Initializable {
     private final WebSocketService wsService = new WebSocketService();
     private final ApiService apiService = new ApiService(ChatClientApp.SERVER_URL);
     private static final int MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+    private static final int MESSAGE_DEDUPE_WINDOW = 800;
     private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
     private final PauseTransition typingDebounce = new PauseTransition(Duration.millis(500));
     private final PauseTransition typingIndicatorTimeout = new PauseTransition(Duration.seconds(2.8));
@@ -88,6 +90,7 @@ public class ChatController implements Initializable {
     private final Map<String, String> roomIdToName = new HashMap<>();
     private final Map<String, Integer> roomUnread = new HashMap<>();
     private final Map<String, LocalDateTime> roomLastActivity = new HashMap<>();
+    private final LinkedHashMap<String, Boolean> recentMessageKeys = new LinkedHashMap<>();
     private String privateTarget = null;
     private String roomTarget = null;
     private final Map<String, String> roomDisplayToId = new HashMap<>();
@@ -249,6 +252,10 @@ public class ChatController implements Initializable {
                 || msg.getType() == MessageType.CALL_END
                 || msg.getType() == MessageType.CALL_REJECT) {
             handleCallSignal(msg);
+            return;
+        }
+
+        if (!acceptMessageIfNew(msg)) {
             return;
         }
 
@@ -868,6 +875,45 @@ public class ChatController implements Initializable {
         messagesBox.getChildren().clear();
         receiptStatusByMessageId.clear();
         reactionsByMessageId.clear();
+        synchronized (recentMessageKeys) {
+            recentMessageKeys.clear();
+        }
+    }
+
+    private boolean acceptMessageIfNew(Message msg) {
+        MessageType type = msg.getType();
+        if (type != MessageType.PUBLIC_MESSAGE
+                && type != MessageType.PRIVATE_MESSAGE
+                && type != MessageType.ROOM_MESSAGE) {
+            return true;
+        }
+
+        String dedupeKey = buildMessageDedupeKey(msg);
+        synchronized (recentMessageKeys) {
+            if (recentMessageKeys.containsKey(dedupeKey)) {
+                return false;
+            }
+            recentMessageKeys.put(dedupeKey, Boolean.TRUE);
+            if (recentMessageKeys.size() > MESSAGE_DEDUPE_WINDOW) {
+                String oldest = recentMessageKeys.keySet().iterator().next();
+                recentMessageKeys.remove(oldest);
+            }
+        }
+        return true;
+    }
+
+    private String buildMessageDedupeKey(Message msg) {
+        if (msg.getId() != null && !msg.getId().isBlank()) {
+            return "id:" + msg.getId();
+        }
+
+        String type = msg.getType() != null ? msg.getType().name() : "";
+        String sender = msg.getSender() != null ? msg.getSender() : "";
+        String receiver = msg.getReceiver() != null ? msg.getReceiver() : "";
+        String roomId = msg.getRoomId() != null ? msg.getRoomId() : "";
+        String content = msg.getContent() != null ? msg.getContent() : "";
+        String timestamp = msg.getTimestamp() != null ? msg.getTimestamp().toString() : "";
+        return type + "|" + sender + "|" + receiver + "|" + roomId + "|" + timestamp + "|" + content;
     }
 
     private void attachReactionMenu(Label contentLabel, VBox bubble, Message msg) {
