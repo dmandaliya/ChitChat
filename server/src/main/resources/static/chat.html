@@ -133,6 +133,7 @@
     <ul id="room-list" class="user-list"></ul>
   </aside>
 
+  <div id="conn-bar" class="conn-bar hidden">⚠ Reconnecting…</div>
   <main class="chat-main">
     <div class="chat-header" id="chat-header">
       <button id="back-btn" onclick="showSidebarMobile()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;padding:0 6px 0 0;color:var(--primary)">&#8592;</button>
@@ -422,11 +423,14 @@ function insertEmoji(emoji){
 }
 
 // ─── Connect ──────────────────────────────────────────────────────────────
+var reconnectDelay=2000;
 function connect(){
   var socket=new SockJS('/ws?username='+encodeURIComponent(currentUser.username));
   stompClient=Stomp.over(socket);
   stompClient.debug=null;
   stompClient.connect({login:currentUser.username},function(){
+    reconnectDelay=2000;
+    setConnectionStatus(true);
     stompClient.subscribe('/topic/user.'+currentUser.username,function(m){handleMessage(JSON.parse(m.body));});
     stompClient.subscribe('/user/queue/receipts',function(m){handleReceipt(JSON.parse(m.body));});
     stompClient.subscribe('/topic/users',function(m){updateOnlineUsers(JSON.parse(m.body).content);});
@@ -437,7 +441,17 @@ function connect(){
     loadRooms();
     setInterval(loadFriendRequests,15000);
     setInterval(loadFriends,10000);
+  }, function(){
+    setConnectionStatus(false);
+    setTimeout(function(){ connect(); }, reconnectDelay);
+    reconnectDelay=Math.min(reconnectDelay*2, 30000);
   });
+}
+
+function setConnectionStatus(online){
+  var bar=document.getElementById('conn-bar');
+  if(online){ bar.classList.add('hidden'); }
+  else { bar.classList.remove('hidden'); }
 }
 
 // ─── Friends ──────────────────────────────────────────────────────────────
@@ -605,7 +619,7 @@ function sendMessage(e){
   clearReply();
   if(chatMode.startsWith('private:')){
     var target=chatMode.split(':')[1];
-    var msg={type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:content,timestamp:new Date().toISOString(),replyTo:quote};
+    var msg={type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:content,timestamp:new Date().toISOString(),replyTo:quote,pending:true};
     displayMessage(msg);
     stompClient.send('/app/chat.sendPrivate',{},JSON.stringify(msg));
     updateLastMsg(chatMode,content);
@@ -796,7 +810,7 @@ function displayMessage(msg){
     var bubbleHover=msg.id?' onmouseenter="showReactionPicker(event,\''+msg.id+'\')"':'';
     var replyBtn='<button class="btn-reply" onclick="setReply(\''+esc(msg.sender||'')+'\',\''+esc((msg.content||'').replace(/'/g,'\\'+'\''))+'\')">↩</button>';
     var metaTheirs=time?'<div class="msg-meta"><span class="msg-time">'+time+'</span></div>':'';
-    var metaMine='<div class="msg-meta">'+(time?'<span class="msg-time">'+time+'</span>':'')+(msg.id?'<span class="read-receipt">\u2713</span>':'')+'</div>';
+    var metaMine='<div class="msg-meta">'+(msg.pending?'<span class="msg-time" style="color:var(--text-muted)">sending\u2026</span>':(time?'<span class="msg-time">'+time+'</span>':''))+(msg.id?'<span class="read-receipt">\u2713</span>':'')+'</div>';
     if(!isMine){
       wrap.innerHTML=
         '<div class="msg-row">'+

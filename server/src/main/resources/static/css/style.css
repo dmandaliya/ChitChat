@@ -465,6 +465,13 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .msg-meta { display: flex; align-items: center; gap: 4px; margin-top: 2px; padding: 0 2px; justify-content: flex-end; }
 .msg-time { font-size: .6rem; color: var(--text-muted); opacity: .75; }
 
+/* ===== Connection status bar ===== */
+.conn-bar {
+  background:#f59e0b; color:#fff; font-size:.8rem; font-weight:600;
+  text-align:center; padding:5px; z-index:500; width:100%;
+}
+.conn-bar.hidden { display:none; }
+
 /* ===== Message fade-in ===== */
 @keyframes msgFadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 .msg-fade-in { animation: msgFadeIn .2s ease; }
