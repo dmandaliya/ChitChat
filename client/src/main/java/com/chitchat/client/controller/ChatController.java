@@ -44,6 +44,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
@@ -67,6 +68,7 @@ public class ChatController implements Initializable {
     @FXML private Label typingIndicatorLabel;
     @FXML private Button callVoiceButton;
     @FXML private Button callVideoButton;
+    @FXML private Button leaveRoomButton;
     @FXML private Button endCallButton;
     @FXML private Button attachImageButton;
 
@@ -75,6 +77,7 @@ public class ChatController implements Initializable {
     private static final int MAX_IMAGE_BYTES = 2 * 1024 * 1024;
     private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
     private final PauseTransition typingDebounce = new PauseTransition(Duration.millis(500));
+    private final PauseTransition typingIndicatorTimeout = new PauseTransition(Duration.seconds(2.8));
     private final Map<String, Label> receiptStatusByMessageId = new HashMap<>();
     private final Map<String, List<String>> reactionsByMessageId = new HashMap<>();
     private final Map<String, String> friendDisplayToUsername = new HashMap<>();
@@ -110,6 +113,7 @@ public class ChatController implements Initializable {
                 clearTypingIndicator();
                 loadPublicHistory();
                 updateCallControls();
+                updateRoomControls();
             } else {
                 privateTarget = selected;
                 friendUnread.put(privateTarget, 0);
@@ -119,6 +123,7 @@ public class ChatController implements Initializable {
                 clearTypingIndicator();
                 loadPrivateHistory(privateTarget);
                 updateCallControls();
+                updateRoomControls();
                 renderFriendList();
             }
         });
@@ -136,6 +141,7 @@ public class ChatController implements Initializable {
                 clearTypingIndicator();
                 loadPublicHistory();
                 updateCallControls();
+                updateRoomControls();
             } else {
                 roomTarget = roomId;
                 roomUnread.put(roomTarget, 0);
@@ -147,6 +153,7 @@ public class ChatController implements Initializable {
                 clearTypingIndicator();
                 loadRoomHistory(roomId);
                 updateCallControls();
+                updateRoomControls();
                 renderRoomList();
             }
         });
@@ -156,6 +163,7 @@ public class ChatController implements Initializable {
         wsService.connect(ChatClientApp.SERVER_URL, session.getUsername());
 
         typingDebounce.setOnFinished(e -> sendTypingIndicator());
+        typingIndicatorTimeout.setOnFinished(e -> clearTypingIndicator());
         messageInput.textProperty().addListener((obs, oldVal, newVal) -> {
             if (privateTarget == null || newVal == null || newVal.isBlank()) {
                 return;
@@ -373,6 +381,7 @@ public class ChatController implements Initializable {
         typingIndicatorLabel.setManaged(true);
         typingIndicatorLabel.setVisible(true);
         typingIndicatorLabel.setText(privateTarget + " is typing...");
+        typingIndicatorTimeout.playFromStart();
     }
 
     private void clearTypingIndicator() {
@@ -515,6 +524,12 @@ public class ChatController implements Initializable {
         endCallButton.setVisible(inCall);
     }
 
+    private void updateRoomControls() {
+        boolean inRoom = roomTarget != null && !roomTarget.isBlank();
+        leaveRoomButton.setManaged(inRoom);
+        leaveRoomButton.setVisible(inRoom);
+    }
+
     private boolean isImagePayload(String content) {
         return content != null && content.startsWith("data:image/") && content.contains(";base64,");
     }
@@ -593,32 +608,35 @@ public class ChatController implements Initializable {
 
     @FXML
     private void handleCreateRoom() {
-        TextInputDialog dialog = new TextInputDialog();
-        dialog.setTitle("New Group Room");
-        dialog.setHeaderText("Create a group chat room");
-        dialog.setContentText("Room name:");
-        dialog.showAndWait().ifPresent(roomName -> {
-            String trimmed = roomName.trim();
-            if (trimmed.isEmpty()) {
-                return;
-            }
+        showCreateRoomDialog();
+    }
 
-            String username = UserSession.getInstance().getUsername();
-            CompletableFuture.runAsync(() -> {
-                try {
-                    Map<String, Object> room = apiService.createRoom(trimmed, "", username);
-                    Object id = room.get("id");
-                    if (id != null) {
-                        wsService.subscribeToRoom(id.toString());
-                    }
-                    Platform.runLater(() -> {
-                        showInfo("Room created: " + trimmed);
-                        loadRooms();
-                    });
-                } catch (IOException e) {
-                    Platform.runLater(() -> showError("Failed to create room: " + e.getMessage()));
-                }
-            });
+    @FXML
+    private void handleLeaveRoom() {
+        if (roomTarget == null || roomTarget.isBlank()) {
+            return;
+        }
+
+        String roomId = roomTarget;
+        String username = UserSession.getInstance().getUsername();
+        String roomName = roomIdToName.getOrDefault(roomId, roomId);
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                apiService.leaveRoom(Long.parseLong(roomId), username);
+                Platform.runLater(() -> {
+                    roomTarget = null;
+                    chatHeaderLabel.setText("Public Chat");
+                    clearTypingIndicator();
+                    loadPublicHistory();
+                    loadRooms();
+                    updateCallControls();
+                    updateRoomControls();
+                    showInfo("Left room #" + roomName);
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> showError("Failed to leave room: " + e.getMessage()));
+            }
         });
     }
 
@@ -1022,6 +1040,94 @@ public class ChatController implements Initializable {
         });
 
         dialog.showAndWait();
+    }
+
+    private void showCreateRoomDialog() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("New Group Room");
+        dialog.setHeaderText("Create a room and invite members");
+
+        TextField roomNameField = new TextField();
+        roomNameField.setPromptText("Room name");
+
+        ListView<String> membersList = new ListView<>();
+        membersList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        membersList.setPrefHeight(200);
+        membersList.getItems().addAll(friendUsernames);
+
+        Label hint = new Label(friendUsernames.isEmpty()
+                ? "No friends available to invite yet."
+                : "Optional: select friends to invite.");
+
+        VBox content = new VBox(10,
+                new Label("Room Name"),
+                roomNameField,
+                new Label("Invite Members"),
+                membersList,
+                hint);
+        dialog.getDialogPane().setContent(content);
+
+        ButtonType createType = new ButtonType("Create");
+        dialog.getDialogPane().getButtonTypes().addAll(createType, ButtonType.CANCEL);
+
+        Button createBtn = (Button) dialog.getDialogPane().lookupButton(createType);
+        createBtn.disableProperty().bind(roomNameField.textProperty().isEmpty());
+
+        createBtn.addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
+            e.consume();
+            String roomName = roomNameField.getText() != null ? roomNameField.getText().trim() : "";
+            if (roomName.isBlank()) {
+                hint.setText("Room name is required.");
+                return;
+            }
+
+            List<String> invited = new ArrayList<>(membersList.getSelectionModel().getSelectedItems());
+            createRoomWithInvites(roomName, invited, dialog);
+        });
+
+        dialog.showAndWait();
+    }
+
+    private void createRoomWithInvites(String roomName, List<String> invited, Dialog<ButtonType> dialog) {
+        String username = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                Map<String, Object> room = apiService.createRoom(roomName, "", username);
+                Object idRaw = room.get("id");
+                if (idRaw == null) {
+                    throw new IOException("Room creation response missing id.");
+                }
+
+                long roomId = Long.parseLong(idRaw.toString());
+                String roomIdText = Long.toString(roomId);
+                for (String member : invited) {
+                    if (member == null || member.isBlank() || username.equals(member)) {
+                        continue;
+                    }
+                    try {
+                        apiService.joinRoom(roomId, member);
+                    } catch (IOException ignored) {
+                        // Continue inviting other users; server can reject duplicates.
+                    }
+                }
+
+                Platform.runLater(() -> {
+                    wsService.subscribeToRoom(roomIdText);
+                    roomTarget = roomIdText;
+                    roomUnread.put(roomIdText, 0);
+                    privateTarget = null;
+                    chatHeaderLabel.setText("Room: #" + roomName);
+                    dialog.close();
+                    loadRooms();
+                    loadRoomHistory(roomIdText);
+                    updateCallControls();
+                    updateRoomControls();
+                    showInfo("Room created: " + roomName);
+                });
+            } catch (Exception ex) {
+                Platform.runLater(() -> showError("Failed to create room: " + ex.getMessage()));
+            }
+        });
     }
 
     private void performUserSearch(String query, ListView<String> resultsList, Label hint) {

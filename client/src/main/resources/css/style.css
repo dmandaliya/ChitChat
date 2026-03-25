@@ -247,6 +247,17 @@
   -fx-background-color: #dc2626;
 }
 
+.btn-room-leave {
+  -fx-background-color: #f97316;
+  -fx-text-fill: white;
+  -fx-background-radius: 16;
+  -fx-padding: 5 10;
+  -fx-cursor: hand;
+}
+.btn-room-leave:hover {
+  -fx-background-color: #ea580c;
+}
+
 .messages-scroll { -fx-background-color: transparent; -fx-background: transparent; }
 .messages-scroll > .viewport { -fx-background-color: transparent; }
 .messages-box { -fx-background-color: transparent; }
