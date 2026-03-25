@@ -465,6 +465,53 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .msg-meta { display: flex; align-items: center; gap: 4px; margin-top: 2px; padding: 0 2px; justify-content: flex-end; }
 .msg-time { font-size: .6rem; color: var(--text-muted); opacity: .75; }
 
+/* ===== Message fade-in ===== */
+@keyframes msgFadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.msg-fade-in { animation: msgFadeIn .2s ease; }
+
+/* ===== Message row (with reply button) ===== */
+.msg-row { display:flex; align-items:flex-end; gap:6px; }
+.msg-row-mine { justify-content:flex-end; }
+.btn-reply { background:none; border:none; font-size:.8rem; color:var(--text-muted); cursor:pointer; opacity:0; padding:2px 5px; border-radius:6px; transition:opacity .15s; flex-shrink:0; }
+.msg-row:hover .btn-reply { opacity:1; }
+.btn-reply:hover { background:var(--bg); color:var(--primary); }
+
+/* ===== Quote / Reply bubble ===== */
+.msg-quote {
+  font-size:.75rem; color:var(--text-muted);
+  border-left:3px solid var(--primary);
+  padding:3px 8px; margin-bottom:4px;
+  background:rgba(76,111,255,.07);
+  border-radius:4px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  max-width:260px;
+}
+
+/* ===== Reply bar (above message input) ===== */
+.reply-bar {
+  display:flex; align-items:center; gap:8px;
+  padding:6px 1.25rem;
+  background:rgba(76,111,255,.07);
+  border-top:1px solid var(--border);
+  border-left:3px solid var(--primary);
+  flex-shrink:0;
+}
+.reply-bar.hidden { display:none; }
+.reply-preview { flex:1; font-size:.8rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.reply-close { background:none; border:none; cursor:pointer; color:var(--text-muted); font-size:.85rem; padding:2px 4px; border-radius:4px; }
+.reply-close:hover { background:var(--border); }
+
+/* ===== Loading spinner ===== */
+.loading-spinner { display:flex; justify-content:center; align-items:center; padding:2rem; }
+.spinner {
+  width:28px; height:28px;
+  border:3px solid var(--border);
+  border-top-color:var(--primary);
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
 /* ===== Image messages ===== */
 .msg-image {
   max-width: 220px;

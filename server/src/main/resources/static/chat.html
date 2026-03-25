@@ -166,6 +166,10 @@
       <div class="emoji-grid" id="emoji-grid"></div>
     </div>
 
+    <div id="reply-bar" class="reply-bar hidden">
+      <span id="reply-preview" class="reply-preview"></span>
+      <button type="button" onclick="clearReply()" class="reply-close">&#x2715;</button>
+    </div>
     <form class="message-bar" onsubmit="sendMessage(event)">
       <button type="button" class="btn-attach" onclick="document.getElementById('img-input').click()" title="Send image">📎</button>
       <button type="button" class="btn-emoji" onclick="toggleEmojiPicker(event)" title="Emoji">😊</button>
@@ -596,15 +600,18 @@ function sendMessage(e){
   var content=document.getElementById('msg-input').value.trim();
   if(!content||!stompClient||chatMode==='')return;
   document.getElementById('msg-input').value='';
+  if(chatMode) localStorage.removeItem('draft_'+chatMode);
+  var quote=replyTo?replyTo.text:null;
+  clearReply();
   if(chatMode.startsWith('private:')){
     var target=chatMode.split(':')[1];
-    var msg={type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:content,timestamp:new Date().toISOString()};
+    var msg={type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:content,timestamp:new Date().toISOString(),replyTo:quote};
     displayMessage(msg);
     stompClient.send('/app/chat.sendPrivate',{},JSON.stringify(msg));
     updateLastMsg(chatMode,content);
   }else if(chatMode.startsWith('room:')){
     var parts=chatMode.split(':');
-    var msg={type:'ROOM_MESSAGE',sender:currentUser.username,receiver:null,roomId:parts[1],content:content,timestamp:new Date().toISOString()};
+    var msg={type:'ROOM_MESSAGE',sender:currentUser.username,receiver:null,roomId:parts[1],content:content,timestamp:new Date().toISOString(),replyTo:quote};
     displayMessage(msg);
     stompClient.send('/app/chat.sendRoom',{},JSON.stringify(msg));
   }
@@ -707,21 +714,47 @@ function sendImage(input){
   input.value='';
 }
 
+// ─── Draft messages ────────────────────────────────────────────────────────
+function saveDraft(){
+  var val=document.getElementById('msg-input').value;
+  if(chatMode) localStorage.setItem('draft_'+chatMode, val);
+}
+function loadDraft(){
+  var val=chatMode?localStorage.getItem('draft_'+chatMode)||'':'';
+  document.getElementById('msg-input').value=val;
+}
+document.getElementById('msg-input').addEventListener('input', saveDraft);
+
+// ─── Reply / Quote ──────────────────────────────────────────────────────────
+var replyTo=null;
+function setReply(sender,text){
+  replyTo={sender:sender,text:text};
+  var bar=document.getElementById('reply-bar');
+  bar.classList.remove('hidden');
+  document.getElementById('reply-preview').textContent=(sender?sender+': ':'')+( text.startsWith('data:image/')?'📷 Photo':text.slice(0,80));
+  document.getElementById('msg-input').focus();
+}
+function clearReply(){
+  replyTo=null;
+  document.getElementById('reply-bar').classList.add('hidden');
+}
+
 // ─── History ──────────────────────────────────────────────────────────────
 async function loadHistory(type,param){
   var url;
   if(type==='private') url='/api/messages/private?user1='+encodeURIComponent(currentUser.username)+'&user2='+encodeURIComponent(param);
   else if(type==='room') url='/api/messages/room/'+param;
   else return;
+  var msgs=document.getElementById('messages');
+  msgs.innerHTML='<div class="loading-spinner"><div class="spinner"></div></div>';
   try{
     var res=await fetch(url);
-    var msgs=await res.json();
-    msgs.forEach(function(m){displayMessage(m);});
-    if(msgs.length>0){
-      var last=msgs[msgs.length-1];
-      updateLastMsg(chatMode,last.content||'');
-    }
-  }catch(ex){}
+    var data=await res.json();
+    msgs.innerHTML='';
+    data.forEach(function(m){displayMessage(m);});
+    if(data.length>0) updateLastMsg(chatMode,data[data.length-1].content||'');
+  }catch(ex){msgs.innerHTML='';}
+  loadDraft();
 }
 
 // ─── Display ──────────────────────────────────────────────────────────────
@@ -729,56 +762,67 @@ function formatTime(ts){
   if(!ts)return'';
   try{
     var d=new Date(ts);
+    var diff=Math.floor((Date.now()-d)/1000);
+    if(diff<60) return 'just now';
+    if(diff<3600) return Math.floor(diff/60)+' min ago';
     var now=new Date();
-    var isToday=d.toDateString()===now.toDateString();
-    if(isToday)return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    if(d.toDateString()===now.toDateString()) return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     return d.toLocaleDateString([],{month:'short',day:'numeric'})+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   }catch(ex){return'';}
 }
 
+function isNearBottom(el){ return el.scrollHeight-el.scrollTop-el.clientHeight<120; }
+
 function displayMessage(msg){
   var messages=document.getElementById('messages');
+  var atBottom=isNearBottom(messages);
   var isMine=msg.sender===currentUser.username;
   var isSystem=msg.sender==='System';
   var isPrivate=msg.type==='PRIVATE_MESSAGE';
   var isImage=msg.content&&msg.content.startsWith('data:image/');
   var wrap=document.createElement('div');
-  wrap.classList.add('msg-wrap',isMine?'mine':'theirs');
+  wrap.classList.add('msg-wrap',isMine?'mine':'theirs','msg-fade-in');
   if(msg.id)wrap.dataset.msgId=msg.id;
   if(isSystem){
     wrap.innerHTML='<span class="msg-system">'+esc(msg.content)+'</span>';
   }else{
     var label='';
-    if(!isMine)label=isPrivate?esc(msg.sender)+' \u2192 You':esc(msg.sender);
-    else if(isPrivate)label='You \u2192 '+esc(msg.receiver);
+    if(!isMine&&!isPrivate)label=esc(msg.sender);
+    var quoteHtml=msg.replyTo?'<div class="msg-quote">'+esc(msg.replyTo)+'</div>':'';
     var contentHtml=isImage
       ?'<img src="'+msg.content+'" class="msg-image" onclick="viewImage(this.src)"/>'
       :esc(msg.content);
     var time=formatTime(msg.timestamp||msg.sentAt||null);
     var bubbleHover=msg.id?' onmouseenter="showReactionPicker(event,\''+msg.id+'\')"':'';
+    var replyBtn='<button class="btn-reply" onclick="setReply(\''+esc(msg.sender||'')+'\',\''+esc((msg.content||'').replace(/'/g,'\\'+'\''))+'\')">↩</button>';
     var metaTheirs=time?'<div class="msg-meta"><span class="msg-time">'+time+'</span></div>':'';
     var metaMine='<div class="msg-meta">'+(time?'<span class="msg-time">'+time+'</span>':'')+(msg.id?'<span class="read-receipt">\u2713</span>':'')+'</div>';
     if(!isMine){
       wrap.innerHTML=
-        '<div style="display:flex;align-items:flex-end;gap:6px">'+
+        '<div class="msg-row">'+
           avatarHtml(msg.sender,'28px')+
           '<div style="display:flex;flex-direction:column;max-width:100%">'+
             (label?'<span class="msg-sender">'+label+'</span>':'')+
+            quoteHtml+
             '<span class="msg-bubble msg-theirs'+(isPrivate?' msg-private':'')+'"'+bubbleHover+'>'+contentHtml+'</span>'+
             metaTheirs+
           '</div>'+
+          replyBtn+
         '</div>';
     }else{
       wrap.innerHTML=
-        '<div style="display:flex;flex-direction:column;align-items:flex-end">'+
-          (label?'<span class="msg-sender">'+label+'</span>':'')+
-          '<span class="msg-bubble msg-mine"'+bubbleHover+'>'+contentHtml+'</span>'+
-          metaMine+
+        '<div class="msg-row msg-row-mine">'+
+          replyBtn+
+          '<div style="display:flex;flex-direction:column;align-items:flex-end">'+
+            quoteHtml+
+            '<span class="msg-bubble msg-mine"'+bubbleHover+'>'+contentHtml+'</span>'+
+            metaMine+
+          '</div>'+
         '</div>';
     }
   }
   messages.appendChild(wrap);
-  messages.scrollTop=messages.scrollHeight;
+  if(atBottom) messages.scrollTop=messages.scrollHeight;
 }
 
 // ─── Reactions ────────────────────────────────────────────────────────────
