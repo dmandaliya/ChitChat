@@ -109,7 +109,7 @@ public class ChatController implements Initializable {
 
             if (selected.equals(privateTarget)) {
                 privateTarget = null;
-                chatHeaderLabel.setText("Public Chat");
+                updateChatHeader();
                 userListView.getSelectionModel().clearSelection();
                 clearTypingIndicator();
                 loadPublicHistory();
@@ -120,7 +120,7 @@ public class ChatController implements Initializable {
                 friendUnread.put(privateTarget, 0);
                 roomTarget = null;
                 roomListView.getSelectionModel().clearSelection();
-                chatHeaderLabel.setText("Private: @" + privateTarget);
+                updateChatHeader();
                 clearTypingIndicator();
                 loadPrivateHistory(privateTarget);
                 updateCallControls();
@@ -137,7 +137,7 @@ public class ChatController implements Initializable {
 
             if (roomId.equals(roomTarget)) {
                 roomTarget = null;
-                chatHeaderLabel.setText("Public Chat");
+                updateChatHeader();
                 roomListView.getSelectionModel().clearSelection();
                 clearTypingIndicator();
                 loadPublicHistory();
@@ -148,7 +148,7 @@ public class ChatController implements Initializable {
                 roomUnread.put(roomTarget, 0);
                 privateTarget = null;
                 userListView.getSelectionModel().clearSelection();
-                chatHeaderLabel.setText("Room: #" + selected);
+                updateChatHeader();
                 wsService.subscribeToRoom(roomId);
                 joinRoomIfNeeded(roomId);
                 clearTypingIndicator();
@@ -636,7 +636,7 @@ public class ChatController implements Initializable {
                 apiService.leaveRoom(Long.parseLong(roomId), username);
                 Platform.runLater(() -> {
                     roomTarget = null;
-                    chatHeaderLabel.setText("Public Chat");
+                    updateChatHeader();
                     clearTypingIndicator();
                     loadPublicHistory();
                     loadRooms();
@@ -740,6 +740,7 @@ public class ChatController implements Initializable {
                         wsService.subscribeToRoom(roomId);
                     }
                     renderRoomList();
+                    updateChatHeader();
                 });
             } catch (IOException ignored) {
                 // Room list is optional for now and can be refreshed by user actions.
@@ -793,6 +794,25 @@ public class ChatController implements Initializable {
                 // Live stream still works if history endpoint is unavailable.
             }
         });
+    }
+
+    private String getRoomDisplayName(String roomId) {
+        if (roomId == null || roomId.isBlank()) {
+            return "";
+        }
+        return roomIdToName.getOrDefault(roomId, roomId);
+    }
+
+    private void updateChatHeader() {
+        if (roomTarget != null) {
+            chatHeaderLabel.setText("Room: #" + getRoomDisplayName(roomTarget));
+            return;
+        }
+        if (privateTarget != null) {
+            chatHeaderLabel.setText("Private: @" + privateTarget);
+            return;
+        }
+        chatHeaderLabel.setText("Public Chat");
     }
 
     private void renderHistory(List<Map<String, Object>> rawHistory) {
@@ -1126,7 +1146,7 @@ public class ChatController implements Initializable {
                     roomTarget = roomIdText;
                     roomUnread.put(roomIdText, 0);
                     privateTarget = null;
-                    chatHeaderLabel.setText("Room: #" + roomName);
+                    updateChatHeader();
                     dialog.close();
                     loadRooms();
                     loadRoomHistory(roomIdText);
