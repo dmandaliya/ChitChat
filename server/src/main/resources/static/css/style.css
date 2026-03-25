@@ -277,12 +277,47 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .typing-indicator {
   padding: 4px 1.5rem;
   font-size: .78rem;
-  color: #22c55e;
-  font-style: italic;
+  color: var(--text-muted);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .typing-indicator.hidden { display: none; }
+.typing-dots { display: flex; align-items: center; gap: 3px; }
+.typing-dots span {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #22c55e;
+  display: inline-block;
+  animation: typingBounce 1.2s infinite ease-in-out;
+}
+.typing-dots span:nth-child(2) { animation-delay: .2s; }
+.typing-dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes typingBounce {
+  0%,60%,100% { transform: translateY(0); opacity:.4; }
+  30% { transform: translateY(-5px); opacity:1; }
+}
+
+/* ===== Responsive mobile ===== */
+@media (max-width: 680px) {
+  :root { --sidebar-width: 100vw; }
+  .icon-rail { display: none; }
+  .chat-layout { position: relative; }
+  .sidebar {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 100%; z-index: 50;
+    transform: translateX(0);
+    transition: transform .25s ease;
+  }
+  .sidebar.hidden-mobile { transform: translateX(-100%); }
+  .chat-main { width: 100%; }
+  .chat-header { padding: .6rem 1rem; }
+  #back-btn { display: flex !important; }
+  .messages { padding: .75rem 1rem; }
+  .message-bar { padding: .6rem .75rem; }
+}
+#back-btn { display: none; }
 
 /* ===== Chat header status ===== */
 .chat-header-status { font-size: .75rem; font-weight: 500; }

@@ -135,6 +135,7 @@
 
   <main class="chat-main">
     <div class="chat-header" id="chat-header">
+      <button id="back-btn" onclick="showSidebarMobile()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;padding:0 6px 0 0;color:var(--primary)">&#8592;</button>
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
         <div id="chat-header-avatar"></div>
         <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
@@ -144,7 +145,10 @@
       </div>
       <div id="chat-header-actions" style="display:flex;gap:6px;flex-shrink:0"></div>
     </div>
-    <div id="typing-indicator" class="typing-indicator hidden"></div>
+    <div id="typing-indicator" class="typing-indicator hidden">
+      <span id="typing-text"></span>
+      <span class="typing-dots"><span></span><span></span><span></span></span>
+    </div>
     <div class="messages" id="messages">
       <div id="empty-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text-muted)">
         <div style="font-size:3rem">💬</div>
@@ -317,6 +321,14 @@ function closeSettings(){
 }
 
 // ─── Rail view ─────────────────────────────────────────────────────────────
+// ─── Mobile sidebar ───────────────────────────────────────────────────────
+function hideSidebarMobile(){
+  if(window.innerWidth<=680) document.querySelector('.sidebar').classList.add('hidden-mobile');
+}
+function showSidebarMobile(){
+  document.querySelector('.sidebar').classList.remove('hidden-mobile');
+}
+
 function setRailView(view){
   document.getElementById('rail-chat').classList.toggle('active',view==='chat');
   document.getElementById('rail-people').classList.toggle('active',view==='people');
@@ -567,7 +579,7 @@ function onTyping(){
 function showTypingIndicator(sender){
   if(chatMode!=='private:'+sender)return;
   var el=document.getElementById('typing-indicator');
-  el.textContent=sender+' is typing\u2026';
+  document.getElementById('typing-text').textContent=sender+' is typing';
   el.classList.remove('hidden');
   if(typingTimers[sender])clearTimeout(typingTimers[sender].timer);
   typingTimers[sender]={showing:true,timer:setTimeout(function(){
@@ -612,6 +624,7 @@ function handleMessage(msg){
   }
   if(convKey&&convKey!==chatMode&&msg.sender!==currentUser.username){
     unreadCounts[convKey]=(unreadCounts[convKey]||0)+1;
+    triggerNotification(msg.sender,msg.content||'');
     renderFriendList();
     loadRooms();
   }
@@ -633,6 +646,45 @@ function handleReceipt(msg){
   var el=document.querySelector('[data-msg-id="'+msg.content+'"] .read-receipt');
   if(el){el.textContent='✓✓';el.classList.add('seen');}
 }
+
+// ─── Notifications ────────────────────────────────────────────────────────
+var totalUnread=0;
+var notifSound=null;
+(function(){
+  try{
+    var ctx=new (window.AudioContext||window.webkitAudioContext)();
+    notifSound=function(){
+      var o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.setValueAtTime(880,ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(440,ctx.currentTime+0.15);
+      g.gain.setValueAtTime(0.15,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.25);
+      o.start(ctx.currentTime);o.stop(ctx.currentTime+0.25);
+    };
+  }catch(ex){}
+  if('Notification' in window && Notification.permission==='default'){
+    Notification.requestPermission();
+  }
+})();
+
+function triggerNotification(sender,text){
+  totalUnread++;
+  document.title='('+totalUnread+') ChitChat';
+  if(notifSound)try{notifSound();}catch(ex){}
+  if('Notification' in window && Notification.permission==='granted' && document.hidden){
+    new Notification(sender,{body:text.startsWith('data:image/')?'📷 Photo':text,icon:'/favicon.ico'});
+  }
+}
+
+function clearTabBadge(){
+  totalUnread=0;
+  document.title='ChitChat';
+}
+
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden) clearTabBadge();
+});
 
 // ─── Image sharing ────────────────────────────────────────────────────────
 function sendImage(input){
@@ -775,6 +827,7 @@ function setPrivateChat(username){
   {
     chatMode='private:'+username;
     unreadCounts['private:'+username]=0;
+    clearTabBadge();
     var isOnline=onlineSet.has(username);
     document.getElementById('chat-header-avatar').innerHTML=avatarHtml(username,'36px');
     document.getElementById('chat-header-name').textContent=username;
@@ -785,6 +838,7 @@ function setPrivateChat(username){
     document.getElementById('messages').innerHTML='';
     document.getElementById('typing-indicator').classList.add('hidden');
     loadHistory('private',username);
+    hideSidebarMobile();
   }
   renderFriendList();
   document.querySelectorAll('#room-list li').forEach(function(li){li.classList.remove('active-target');});
