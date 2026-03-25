@@ -1,5 +1,10 @@
 package com.chitchat.client.controller;
 
+import java.awt.AWTException;
+import java.awt.GraphicsEnvironment;
+import java.awt.SystemTray;
+import java.awt.TrayIcon;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -77,6 +82,7 @@ public class ChatController implements Initializable {
     private final ApiService apiService = new ApiService(ChatClientApp.SERVER_URL);
     private static final int MAX_IMAGE_BYTES = 2 * 1024 * 1024;
     private static final int MESSAGE_DEDUPE_WINDOW = 800;
+    private static final long NOTIFICATION_COOLDOWN_MS = 1500;
     private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
     private final PauseTransition typingDebounce = new PauseTransition(Duration.millis(500));
     private final PauseTransition typingIndicatorTimeout = new PauseTransition(Duration.seconds(2.8));
@@ -97,11 +103,16 @@ public class ChatController implements Initializable {
     private boolean loadingHistory = false;
     private String activeCallTarget = null;
     private UserPreferences activePreferences = new UserPreferences();
+    private TrayIcon trayIcon;
+    private boolean windowFocused = true;
+    private long lastNotificationEpochMs = 0;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         UserSession session = UserSession.getInstance();
         userInfoLabel.setText(session.getDisplayName() + " (@" + session.getUsername() + ")");
+        initDesktopNotifications();
+        Platform.runLater(this::bindWindowFocusTracking);
 
         // Click on user in list to open private chat
         userListView.setOnMouseClicked(e -> {
@@ -111,6 +122,7 @@ public class ChatController implements Initializable {
             if (selected == null || selected.equals(session.getUsername())) return;
 
             if (selected.equals(privateTarget)) {
+                sendTypingStopped();
                 privateTarget = null;
                 updateChatHeader();
                 userListView.getSelectionModel().clearSelection();
@@ -119,6 +131,7 @@ public class ChatController implements Initializable {
                 updateCallControls();
                 updateRoomControls();
             } else {
+                sendTypingStopped();
                 privateTarget = selected;
                 friendUnread.put(privateTarget, 0);
                 roomTarget = null;
@@ -147,6 +160,7 @@ public class ChatController implements Initializable {
                 updateCallControls();
                 updateRoomControls();
             } else {
+                sendTypingStopped();
                 roomTarget = roomId;
                 roomUnread.put(roomTarget, 0);
                 privateTarget = null;
@@ -169,7 +183,12 @@ public class ChatController implements Initializable {
         typingDebounce.setOnFinished(e -> sendTypingIndicator());
         typingIndicatorTimeout.setOnFinished(e -> clearTypingIndicator());
         messageInput.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (privateTarget == null || newVal == null || newVal.isBlank()) {
+            if (privateTarget == null) {
+                return;
+            }
+            if (newVal == null || newVal.isBlank()) {
+                typingDebounce.stop();
+                sendTypingStopped();
                 return;
             }
             typingDebounce.playFromStart();
@@ -185,6 +204,7 @@ public class ChatController implements Initializable {
     private void handleSend() {
         String content = messageInput.getText().trim();
         if (content.isEmpty()) return;
+        sendTypingStopped();
         messageInput.clear();
         clearTypingIndicator();
 
@@ -259,9 +279,14 @@ public class ChatController implements Initializable {
             return;
         }
 
+        maybeClearTypingIndicatorOnIncoming(msg);
+
         trackMessageActivity(msg);
 
-        if (!shouldDisplayMessage(msg)) {
+        boolean willDisplay = shouldDisplayMessage(msg);
+        maybeNotifyIncomingMessage(msg, willDisplay);
+
+        if (!willDisplay) {
             return;
         }
 
@@ -392,6 +417,13 @@ public class ChatController implements Initializable {
         if (privateTarget == null || msg.getSender() == null || !msg.getSender().equals(privateTarget)) {
             return;
         }
+
+        String typingState = msg.getContent() != null ? msg.getContent().trim().toLowerCase() : "typing";
+        if ("stopped".equals(typingState)) {
+            clearTypingIndicator();
+            return;
+        }
+
         typingIndicatorLabel.setManaged(true);
         typingIndicatorLabel.setVisible(true);
         typingIndicatorLabel.setText(privateTarget + " is typing...");
@@ -405,12 +437,102 @@ public class ChatController implements Initializable {
     }
 
     private void sendTypingIndicator() {
+        sendTypingSignal("typing");
+    }
+
+    private void sendTypingStopped() {
+        sendTypingSignal("stopped");
+    }
+
+    private void sendTypingSignal(String state) {
         if (privateTarget == null) {
             return;
         }
         String sender = UserSession.getInstance().getUsername();
-        Message typing = new Message(MessageType.TYPING, sender, privateTarget, "typing");
+        Message typing = new Message(MessageType.TYPING, sender, privateTarget, state);
         wsService.sendMessage(typing);
+    }
+
+    private void maybeClearTypingIndicatorOnIncoming(Message msg) {
+        if (msg.getType() != MessageType.PRIVATE_MESSAGE || privateTarget == null) {
+            return;
+        }
+
+        String me = UserSession.getInstance().getUsername();
+        boolean fromActiveUser = privateTarget.equals(msg.getSender()) && me.equals(msg.getReceiver());
+        if (fromActiveUser) {
+            clearTypingIndicator();
+        }
+    }
+
+    private void initDesktopNotifications() {
+        if (GraphicsEnvironment.isHeadless() || !SystemTray.isSupported()) {
+            return;
+        }
+        try {
+            SystemTray tray = SystemTray.getSystemTray();
+            BufferedImage trayImage = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+            trayIcon = new TrayIcon(trayImage, "ChitChat");
+            trayIcon.setImageAutoSize(true);
+            tray.add(trayIcon);
+        } catch (AWTException | SecurityException ignored) {
+            trayIcon = null;
+        }
+    }
+
+    private void bindWindowFocusTracking() {
+        if (chatRoot == null || chatRoot.getScene() == null) {
+            return;
+        }
+        Stage stage = (Stage) chatRoot.getScene().getWindow();
+        if (stage == null) {
+            return;
+        }
+        windowFocused = stage.isFocused();
+        stage.focusedProperty().addListener((obs, oldVal, isFocused) -> windowFocused = isFocused);
+    }
+
+    private void maybeNotifyIncomingMessage(Message msg, boolean willDisplay) {
+        if (!activePreferences.isNotis() || msg == null || msg.getType() == null) {
+            return;
+        }
+
+        if (msg.getType() != MessageType.PUBLIC_MESSAGE
+                && msg.getType() != MessageType.PRIVATE_MESSAGE
+                && msg.getType() != MessageType.ROOM_MESSAGE) {
+            return;
+        }
+
+        String me = UserSession.getInstance().getUsername();
+        if (me.equals(msg.getSender())) {
+            return;
+        }
+
+        if (windowFocused && willDisplay) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if (now - lastNotificationEpochMs < NOTIFICATION_COOLDOWN_MS) {
+            return;
+        }
+        lastNotificationEpochMs = now;
+
+        String title;
+        if (msg.getType() == MessageType.PRIVATE_MESSAGE) {
+            title = "Private message from @" + msg.getSender();
+        } else if (msg.getType() == MessageType.ROOM_MESSAGE) {
+            String roomName = getRoomDisplayName(msg.getRoomId());
+            title = "Room #" + roomName;
+        } else {
+            title = "Public message from @" + msg.getSender();
+        }
+
+        String content = msg.getContent() != null ? msg.getContent() : "";
+        String preview = content.length() > 120 ? content.substring(0, 120) + "..." : content;
+        if (trayIcon != null) {
+            trayIcon.displayMessage(title, preview, TrayIcon.MessageType.NONE);
+        }
     }
 
     private void sendReadReceipt(String messageId) {

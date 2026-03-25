@@ -1,4 +1,5 @@
 module com.chitchat.client {
+    requires java.desktop;
     requires javafx.controls;
     requires javafx.fxml;
     requires com.chitchat.shared;
