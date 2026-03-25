@@ -135,13 +135,23 @@
 
   <main class="chat-main">
     <div class="chat-header" id="chat-header">
-      <div id="chat-header-info" style="display:flex;flex-direction:column;gap:2px">
-        <span id="chat-header-name">Select a conversation</span>
-        <span id="chat-header-status" class="chat-header-status"></span>
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+        <div id="chat-header-avatar"></div>
+        <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+          <span id="chat-header-name" style="font-size:.95rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Select a conversation</span>
+          <span id="chat-header-status" class="chat-header-status"></span>
+        </div>
       </div>
+      <div id="chat-header-actions" style="display:flex;gap:6px;flex-shrink:0"></div>
     </div>
     <div id="typing-indicator" class="typing-indicator hidden"></div>
-    <div class="messages" id="messages"></div>
+    <div class="messages" id="messages">
+      <div id="empty-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text-muted)">
+        <div style="font-size:3rem">💬</div>
+        <div style="font-weight:700;font-size:1.1rem;color:var(--text)">Welcome to ChitChat</div>
+        <div style="font-size:.85rem;text-align:center;max-width:220px">Select a friend to start chatting, or create a group chat</div>
+      </div>
+    </div>
 
     <!-- EMOJI PICKER — lives inside chat-main, above message bar -->
     <div id="emoji-picker" class="emoji-picker hidden">
@@ -156,7 +166,7 @@
       <button type="button" class="btn-attach" onclick="document.getElementById('img-input').click()" title="Send image">📎</button>
       <button type="button" class="btn-emoji" onclick="toggleEmojiPicker(event)" title="Emoji">😊</button>
       <input type="text" id="msg-input" placeholder="Type a message&hellip;" autocomplete="off" oninput="onTyping()"/>
-      <button type="submit" class="btn-send">Send</button>
+      <button type="submit" class="btn-send" title="Send">&#10148;</button>
     </form>
   </main>
 </div>
@@ -762,21 +772,40 @@ function viewImage(src){
 function setPrivateChat(username){
   if(chatMode==='private:'+username){
     chatMode='';
-    document.getElementById('chat-header-name').textContent='Select a conversation';
-    document.getElementById('chat-header-status').textContent='';
-    document.getElementById('messages').innerHTML='';
+    setHeaderEmpty();
+    document.getElementById('messages').innerHTML=emptyStateHtml();
     document.getElementById('typing-indicator').classList.add('hidden');
   }else{
     chatMode='private:'+username;
     unreadCounts['private:'+username]=0;
-    document.getElementById('chat-header-name').textContent='@'+username;
-    document.getElementById('chat-header-status').textContent=onlineSet.has(username)?'\u25cf Online':'';
+    var isOnline=onlineSet.has(username);
+    document.getElementById('chat-header-avatar').innerHTML=avatarHtml(username,'36px');
+    document.getElementById('chat-header-name').textContent=username;
+    document.getElementById('chat-header-status').innerHTML=isOnline?'<span style="color:#22c55e">\u25cf Online</span>':'<span style="color:var(--text-muted)">Offline</span>';
+    document.getElementById('chat-header-actions').innerHTML=
+      '<button class="btn-call-icon" title="Voice call" onclick="startCall(\''+esc(username)+'\',false)">📞</button>'+
+      '<button class="btn-call-icon" title="Video call" onclick="startCall(\''+esc(username)+'\',true)">🎥</button>';
     document.getElementById('messages').innerHTML='';
     document.getElementById('typing-indicator').classList.add('hidden');
     loadHistory('private',username);
   }
   renderFriendList();
   document.querySelectorAll('#room-list li').forEach(function(li){li.classList.remove('active-target');});
+}
+
+function setHeaderEmpty(){
+  document.getElementById('chat-header-avatar').innerHTML='';
+  document.getElementById('chat-header-name').textContent='Select a conversation';
+  document.getElementById('chat-header-status').textContent='';
+  document.getElementById('chat-header-actions').innerHTML='';
+}
+
+function emptyStateHtml(){
+  return '<div id="empty-state" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text-muted)">'+
+    '<div style="font-size:3rem">💬</div>'+
+    '<div style="font-weight:700;font-size:1.1rem;color:var(--text)">Welcome to ChitChat</div>'+
+    '<div style="font-size:.85rem;text-align:center;max-width:220px">Select a friend to start chatting, or create a group chat</div>'+
+  '</div>';
 }
 
 // ─── Rooms ────────────────────────────────────────────────────────────────
@@ -818,8 +847,10 @@ async function joinAndOpenRoom(roomId,roomName){
   subscribeRoom(roomId);
   chatMode='room:'+roomId+':'+roomName;
   unreadCounts['room:'+roomId]=0;
-  document.getElementById('chat-header-name').textContent='# '+roomName;
-  document.getElementById('chat-header-status').textContent='';
+  document.getElementById('chat-header-avatar').innerHTML='<div class="avatar" style="width:36px;height:36px;font-size:16px;background:var(--primary)">#</div>';
+  document.getElementById('chat-header-name').textContent=roomName;
+  document.getElementById('chat-header-status').innerHTML='<span style="color:var(--text-muted)">Group chat</span>';
+  document.getElementById('chat-header-actions').innerHTML='';
   document.getElementById('messages').innerHTML='';
   document.getElementById('typing-indicator').classList.add('hidden');
   loadHistory('room',roomId);

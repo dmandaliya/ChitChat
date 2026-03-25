@@ -100,7 +100,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 /* Main Chat */
 .chat-main { flex: 1; display: flex; flex-direction: column; position: relative; overflow: visible; }
 
-.chat-header { padding: 1rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); font-weight: 600; font-size: 1rem; flex-shrink: 0; }
+.chat-header { padding: .75rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); font-weight: 600; font-size: 1rem; flex-shrink: 0; display: flex; align-items: center; gap: 10px; min-height: 62px; }
 
 .messages { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 1rem 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
 
@@ -285,7 +285,20 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .typing-indicator.hidden { display: none; }
 
 /* ===== Chat header status ===== */
-.chat-header-status { font-size: .75rem; color: #22c55e; font-weight: 500; }
+.chat-header-status { font-size: .75rem; font-weight: 500; }
+
+/* ===== Chat header call buttons ===== */
+.btn-call-icon {
+  background: none;
+  border: none;
+  font-size: 1.15rem;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  opacity: .7;
+  transition: opacity .15s, background .15s;
+}
+.btn-call-icon:hover { opacity: 1; background: var(--bg); }
 
 /* ===== Message bar extras ===== */
 .btn-attach, .btn-emoji {
