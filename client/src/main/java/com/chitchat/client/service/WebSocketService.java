@@ -1,14 +1,17 @@
 package com.chitchat.client.service;
 
+import java.net.URI;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.handshake.ServerHandshake;
+
 import com.chitchat.shared.Message;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
-
-import java.net.URI;
-import java.util.function.Consumer;
 
 public class WebSocketService {
 
@@ -16,6 +19,7 @@ public class WebSocketService {
     private final ObjectMapper mapper;
     private Consumer<Message> onMessage;
     private Consumer<String> onUserList;
+    private final Set<String> roomSubscriptions = ConcurrentHashMap.newKeySet();
 
     public WebSocketService() {
         mapper = new ObjectMapper();
@@ -79,6 +83,11 @@ public class WebSocketService {
             wsClient.send("SUBSCRIBE\nid:sub-public\ndestination:/topic/public\n\n\u0000");
             wsClient.send("SUBSCRIBE\nid:sub-private\ndestination:/user/queue/private\n\n\u0000");
             wsClient.send("SUBSCRIBE\nid:sub-users\ndestination:/topic/users\n\n\u0000");
+            wsClient.send("SUBSCRIBE\nid:sub-receipts\ndestination:/user/queue/receipts\n\n\u0000");
+            wsClient.send("SUBSCRIBE\nid:sub-call\ndestination:/user/queue/call\n\n\u0000");
+            for (String roomId : roomSubscriptions) {
+                subscribeToRoom(roomId);
+            }
             // Send join message
             sendMessage(new com.chitchat.shared.Message(
                     com.chitchat.shared.MessageType.LOGIN, username, null, ""));
@@ -112,6 +121,21 @@ public class WebSocketService {
                 destination = "/app/chat.join";
             } else if (message.getType() == com.chitchat.shared.MessageType.LOGOUT) {
                 destination = "/app/chat.leave";
+            } else if (message.getType() == com.chitchat.shared.MessageType.ROOM_MESSAGE) {
+                destination = "/app/chat.sendRoom";
+            } else if (message.getType() == com.chitchat.shared.MessageType.READ_RECEIPT) {
+                destination = "/app/chat.read";
+            } else if (message.getType() == com.chitchat.shared.MessageType.TYPING) {
+                destination = "/app/chat.typing";
+            } else if (message.getType() == com.chitchat.shared.MessageType.CALL_OFFER) {
+                destination = "/app/call.offer";
+            } else if (message.getType() == com.chitchat.shared.MessageType.CALL_ANSWER) {
+                destination = "/app/call.answer";
+            } else if (message.getType() == com.chitchat.shared.MessageType.CALL_ICE) {
+                destination = "/app/call.ice";
+            } else if (message.getType() == com.chitchat.shared.MessageType.CALL_END
+                    || message.getType() == com.chitchat.shared.MessageType.CALL_REJECT) {
+                destination = "/app/call.end";
             }
             String json = mapper.writeValueAsString(message);
             String frame = "SEND\ndestination:" + destination + "\ncontent-type:application/json\n\n"
@@ -128,5 +152,13 @@ public class WebSocketService {
             wsClient.send("DISCONNECT\n\n\u0000");
             wsClient.close();
         }
+    }
+
+    public void subscribeToRoom(String roomId) {
+        if (roomId == null || roomId.isBlank()) return;
+        roomSubscriptions.add(roomId);
+        if (wsClient == null || !wsClient.isOpen()) return;
+        String frame = "SUBSCRIBE\nid:sub-room-" + roomId + "\ndestination:/topic/room/" + roomId + "\n\n\u0000";
+        wsClient.send(frame);
     }
 }

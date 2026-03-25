@@ -1,11 +1,20 @@
 package com.chitchat.client.controller;
 
+import java.io.IOException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.ResourceBundle;
+import java.util.concurrent.CompletableFuture;
+
 import com.chitchat.client.ChatClientApp;
 import com.chitchat.client.model.UserSession;
 import com.chitchat.client.service.ApiService;
 import com.chitchat.client.service.WebSocketService;
 import com.chitchat.shared.Message;
 import com.chitchat.shared.MessageType;
+
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -13,14 +22,16 @@ import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-
-import java.io.IOException;
-import java.net.URL;
-import java.util.ResourceBundle;
 
 public class ChatController implements Initializable {
 
@@ -35,6 +46,8 @@ public class ChatController implements Initializable {
     private final WebSocketService wsService = new WebSocketService();
     private final ApiService apiService = new ApiService(ChatClientApp.SERVER_URL);
     private String privateTarget = null;
+    private String roomTarget = null;
+    private final Map<String, String> roomDisplayToId = new HashMap<>();
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -52,13 +65,38 @@ public class ChatController implements Initializable {
                 userListView.getSelectionModel().clearSelection();
             } else {
                 privateTarget = selected;
+                roomTarget = null;
+                roomListView.getSelectionModel().clearSelection();
                 chatHeaderLabel.setText("Private: @" + privateTarget);
+            }
+        });
+
+        roomListView.setOnMouseClicked(e -> {
+            String selected = roomListView.getSelectionModel().getSelectedItem();
+            if (selected == null) return;
+            String roomId = roomDisplayToId.get(selected);
+            if (roomId == null || roomId.isBlank()) return;
+
+            if (roomId.equals(roomTarget)) {
+                roomTarget = null;
+                chatHeaderLabel.setText("Public Chat");
+                roomListView.getSelectionModel().clearSelection();
+            } else {
+                roomTarget = roomId;
+                privateTarget = null;
+                userListView.getSelectionModel().clearSelection();
+                chatHeaderLabel.setText("Room: #" + selected);
+                wsService.subscribeToRoom(roomId);
+                joinRoomIfNeeded(roomId);
             }
         });
 
         wsService.setOnMessage(msg -> Platform.runLater(() -> displayMessage(msg)));
         wsService.setOnUserList(csv -> Platform.runLater(() -> updateUserList(csv)));
         wsService.connect(ChatClientApp.SERVER_URL, session.getUsername());
+
+        loadFriends();
+        loadRooms();
     }
 
     @FXML
@@ -69,7 +107,10 @@ public class ChatController implements Initializable {
 
         UserSession session = UserSession.getInstance();
         Message msg;
-        if (privateTarget != null) {
+        if (roomTarget != null) {
+            msg = new Message(MessageType.ROOM_MESSAGE, session.getUsername(), null, content);
+            msg.setRoomId(roomTarget);
+        } else if (privateTarget != null) {
             msg = new Message(MessageType.PRIVATE_MESSAGE, session.getUsername(), privateTarget, content);
         } else {
             msg = new Message(MessageType.PUBLIC_MESSAGE, session.getUsername(), null, content);
@@ -153,8 +194,22 @@ public class ChatController implements Initializable {
         dialog.setHeaderText("Add a friend by username");
         dialog.setContentText("Username:");
         dialog.showAndWait().ifPresent(username -> {
-            // TODO: Ayden — call POST /api/friends/add with {username}
-            System.out.println("Add friend: " + username);
+            String target = username.trim();
+            if (target.isEmpty()) {
+                return;
+            }
+            String currentUser = UserSession.getInstance().getUsername();
+            CompletableFuture.runAsync(() -> {
+                try {
+                    apiService.sendFriendRequest(currentUser, target);
+                    Platform.runLater(() -> {
+                        showInfo("Friend request sent to @" + target);
+                        loadFriends();
+                    });
+                } catch (IOException e) {
+                    Platform.runLater(() -> showError("Failed to send request: " + e.getMessage()));
+                }
+            });
         });
     }
 
@@ -165,8 +220,27 @@ public class ChatController implements Initializable {
         dialog.setHeaderText("Create a group chat room");
         dialog.setContentText("Room name:");
         dialog.showAndWait().ifPresent(roomName -> {
-            // TODO: Ayden — call POST /api/rooms with {name}
-            System.out.println("Create room: " + roomName);
+            String trimmed = roomName.trim();
+            if (trimmed.isEmpty()) {
+                return;
+            }
+
+            String username = UserSession.getInstance().getUsername();
+            CompletableFuture.runAsync(() -> {
+                try {
+                    Map<String, Object> room = apiService.createRoom(trimmed, "", username);
+                    Object id = room.get("id");
+                    if (id != null) {
+                        wsService.subscribeToRoom(id.toString());
+                    }
+                    Platform.runLater(() -> {
+                        showInfo("Room created: " + trimmed);
+                        loadRooms();
+                    });
+                } catch (IOException e) {
+                    Platform.runLater(() -> showError("Failed to create room: " + e.getMessage()));
+                }
+            });
         });
     }
 
@@ -190,5 +264,96 @@ public class ChatController implements Initializable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private void loadFriends() {
+        String username = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                List<Map<String, Object>> friends = apiService.getFriends(username);
+                Platform.runLater(() -> {
+                    String selected = userListView.getSelectionModel().getSelectedItem();
+                    userListView.getItems().clear();
+                    for (Map<String, Object> friend : friends) {
+                        Object friendUsername = friend.get("username");
+                        if (friendUsername != null) {
+                            userListView.getItems().add(friendUsername.toString());
+                        }
+                    }
+                    if (selected != null) {
+                        userListView.getSelectionModel().select(selected);
+                    }
+                });
+            } catch (IOException ignored) {
+                // WS online list still provides a usable fallback list.
+            }
+        });
+    }
+
+    private void loadRooms() {
+        String username = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                List<Map<String, Object>> rooms = apiService.getRooms();
+                Platform.runLater(() -> {
+                    String selected = roomListView.getSelectionModel().getSelectedItem();
+                    roomDisplayToId.clear();
+                    roomListView.getItems().clear();
+
+                    for (Map<String, Object> room : rooms) {
+                        Object id = room.get("id");
+                        Object name = room.get("name");
+                        if (id == null || name == null) {
+                            continue;
+                        }
+
+                        Object members = room.get("members");
+                        boolean isMember = true;
+                        if (members instanceof List<?> memberList) {
+                            isMember = memberList.stream().anyMatch(m -> username.equals(String.valueOf(m)));
+                        }
+                        if (!isMember) {
+                            continue;
+                        }
+
+                        String display = name.toString();
+                        roomDisplayToId.put(display, id.toString());
+                        roomListView.getItems().add(display);
+                        wsService.subscribeToRoom(id.toString());
+                    }
+
+                    if (selected != null) {
+                        roomListView.getSelectionModel().select(selected);
+                    }
+                });
+            } catch (IOException ignored) {
+                // Room list is optional for now and can be refreshed by user actions.
+            }
+        });
+    }
+
+    private void joinRoomIfNeeded(String roomId) {
+        String username = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                apiService.joinRoom(Long.parseLong(roomId), username);
+            } catch (Exception ignored) {
+                // User may already be a member or room join may be unnecessary.
+            }
+        });
+    }
+
+    private void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setHeaderText("Request failed");
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    private void showInfo(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setHeaderText("ChitChat");
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }
