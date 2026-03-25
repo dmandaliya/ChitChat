@@ -52,7 +52,13 @@
   <VBox HBox.hgrow="ALWAYS" styleClass="chat-main">
 
     <!-- Chat header -->
-    <Label fx:id="chatHeaderLabel" text="Public Chat" styleClass="chat-header"/>
+    <HBox styleClass="chat-header" alignment="CENTER_LEFT" spacing="8">
+      <Label fx:id="chatHeaderLabel" text="Public Chat" styleClass="chat-header-title" HBox.hgrow="ALWAYS"/>
+      <Region HBox.hgrow="ALWAYS"/>
+      <Button fx:id="callVoiceButton" text="📞" styleClass="btn-call" onAction="#handleVoiceCall" visible="false" managed="false"/>
+      <Button fx:id="callVideoButton" text="🎥" styleClass="btn-call" onAction="#handleVideoCall" visible="false" managed="false"/>
+      <Button fx:id="endCallButton" text="End" styleClass="btn-call-end" onAction="#handleEndCall" visible="false" managed="false"/>
+    </HBox>
 
     <!-- Messages -->
     <ScrollPane fx:id="messagesScroll" VBox.vgrow="ALWAYS" fitToWidth="true"

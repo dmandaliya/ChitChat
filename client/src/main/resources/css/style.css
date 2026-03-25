@@ -214,12 +214,37 @@
 
 .chat-header {
   -fx-padding: 14 20;
-  -fx-font-weight: bold;
-  -fx-font-size: 14px;
-  -fx-text-fill: #1c1c1c;
   -fx-background-color: white;
   -fx-border-color: #bdbdbd;
   -fx-border-width: 0 0 1 0;
+}
+
+.chat-header-title {
+  -fx-font-weight: bold;
+  -fx-font-size: 14px;
+  -fx-text-fill: #1c1c1c;
+}
+
+.btn-call {
+  -fx-background-color: #e8f1f2;
+  -fx-text-fill: #1c1c1c;
+  -fx-background-radius: 16;
+  -fx-padding: 5 9;
+  -fx-cursor: hand;
+}
+.btn-call:hover {
+  -fx-background-color: #d6e7e9;
+}
+
+.btn-call-end {
+  -fx-background-color: #ef4444;
+  -fx-text-fill: white;
+  -fx-background-radius: 16;
+  -fx-padding: 5 11;
+  -fx-cursor: hand;
+}
+.btn-call-end:hover {
+  -fx-background-color: #dc2626;
 }
 
 .messages-scroll { -fx-background-color: transparent; -fx-background: transparent; }
@@ -244,6 +269,13 @@
   -fx-font-size: 10px;
   -fx-text-fill: #0f766e;
   -fx-padding: 0 2;
+}
+.msg-reactions {
+  -fx-font-size: 10px;
+  -fx-text-fill: #1f2937;
+  -fx-background-color: #fde68a;
+  -fx-background-radius: 10;
+  -fx-padding: 2 8;
 }
 .msg-system {
   -fx-text-fill: #bdbdbd;

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,9 +32,11 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
@@ -53,16 +56,21 @@ public class ChatController implements Initializable {
     @FXML private ScrollPane messagesScroll;
     @FXML private TextField messageInput;
     @FXML private Label typingIndicatorLabel;
+    @FXML private Button callVoiceButton;
+    @FXML private Button callVideoButton;
+    @FXML private Button endCallButton;
 
     private final WebSocketService wsService = new WebSocketService();
     private final ApiService apiService = new ApiService(ChatClientApp.SERVER_URL);
     private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
     private final PauseTransition typingDebounce = new PauseTransition(Duration.millis(500));
     private final Map<String, Label> receiptStatusByMessageId = new HashMap<>();
+    private final Map<String, List<String>> reactionsByMessageId = new HashMap<>();
     private String privateTarget = null;
     private String roomTarget = null;
     private final Map<String, String> roomDisplayToId = new HashMap<>();
     private boolean loadingHistory = false;
+    private String activeCallTarget = null;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -80,6 +88,7 @@ public class ChatController implements Initializable {
                 userListView.getSelectionModel().clearSelection();
                 clearTypingIndicator();
                 loadPublicHistory();
+                updateCallControls();
             } else {
                 privateTarget = selected;
                 roomTarget = null;
@@ -87,6 +96,7 @@ public class ChatController implements Initializable {
                 chatHeaderLabel.setText("Private: @" + privateTarget);
                 clearTypingIndicator();
                 loadPrivateHistory(privateTarget);
+                updateCallControls();
             }
         });
 
@@ -102,6 +112,7 @@ public class ChatController implements Initializable {
                 roomListView.getSelectionModel().clearSelection();
                 clearTypingIndicator();
                 loadPublicHistory();
+                updateCallControls();
             } else {
                 roomTarget = roomId;
                 privateTarget = null;
@@ -111,6 +122,7 @@ public class ChatController implements Initializable {
                 joinRoomIfNeeded(roomId);
                 clearTypingIndicator();
                 loadRoomHistory(roomId);
+                updateCallControls();
             }
         });
 
@@ -166,6 +178,14 @@ public class ChatController implements Initializable {
             return;
         }
 
+        if (msg.getType() == MessageType.CALL_OFFER
+                || msg.getType() == MessageType.CALL_ANSWER
+                || msg.getType() == MessageType.CALL_END
+                || msg.getType() == MessageType.CALL_REJECT) {
+            handleCallSignal(msg);
+            return;
+        }
+
         if (!shouldDisplayMessage(msg)) {
             return;
         }
@@ -209,6 +229,8 @@ public class ChatController implements Initializable {
                     isMine ? "msg-mine" : "msg-theirs");
             if (isPrivate) content.getStyleClass().add("msg-private");
 
+                attachReactionMenu(content, bubble, msg);
+
             bubble.getChildren().add(content);
 
             HBox meta = new HBox(6);
@@ -233,6 +255,8 @@ public class ChatController implements Initializable {
             if (!fromHistory && !isMine && isPrivate && msg.getId() != null && !msg.getId().isBlank()) {
                 sendReadReceipt(msg.getId());
             }
+
+            addReactionBadgeIfPresent(bubble, msg.getId());
         }
 
         messagesBox.getChildren().add(row);
@@ -309,6 +333,121 @@ public class ChatController implements Initializable {
         Message receipt = new Message(MessageType.READ_RECEIPT, sender, null, messageId);
         receipt.setId(messageId);
         wsService.sendMessage(receipt);
+    }
+
+    @FXML
+    private void handleVoiceCall() {
+        startCall(false);
+    }
+
+    @FXML
+    private void handleVideoCall() {
+        startCall(true);
+    }
+
+    @FXML
+    private void handleEndCall() {
+        endCall("Call ended");
+    }
+
+    private void startCall(boolean withVideo) {
+        if (privateTarget == null || privateTarget.isBlank()) {
+            return;
+        }
+        if (activeCallTarget != null) {
+            showInfo("You are already in a call with @" + activeCallTarget);
+            return;
+        }
+
+        String sender = UserSession.getInstance().getUsername();
+        Message offer = new Message(MessageType.CALL_OFFER, sender, privateTarget, withVideo ? "VIDEO" : "VOICE");
+        wsService.sendMessage(offer);
+        activeCallTarget = privateTarget;
+        updateCallControls();
+        showInfo((withVideo ? "Video" : "Voice") + " call offer sent to @" + privateTarget);
+    }
+
+    private void endCall(String statusMessage) {
+        if (activeCallTarget == null || activeCallTarget.isBlank()) {
+            return;
+        }
+
+        String sender = UserSession.getInstance().getUsername();
+        Message end = new Message(MessageType.CALL_END, sender, activeCallTarget, "");
+        wsService.sendMessage(end);
+        activeCallTarget = null;
+        updateCallControls();
+        showInfo(statusMessage);
+    }
+
+    private void handleCallSignal(Message msg) {
+        String me = UserSession.getInstance().getUsername();
+        if (msg.getReceiver() != null && !me.equals(msg.getReceiver())) {
+            return;
+        }
+
+        if (msg.getType() == MessageType.CALL_OFFER) {
+            Alert incoming = new Alert(Alert.AlertType.CONFIRMATION);
+            incoming.setTitle("Incoming Call");
+            incoming.setHeaderText("Incoming " + ("VIDEO".equalsIgnoreCase(msg.getContent()) ? "video" : "voice")
+                    + " call from @" + msg.getSender());
+            incoming.setContentText("Accept this call?");
+            ButtonType accept = new ButtonType("Accept");
+            ButtonType reject = new ButtonType("Reject");
+            incoming.getButtonTypes().setAll(accept, reject);
+
+            incoming.showAndWait().ifPresent(choice -> {
+                if (choice == accept) {
+                    Message answer = new Message(MessageType.CALL_ANSWER, me, msg.getSender(), "accepted");
+                    wsService.sendMessage(answer);
+                    activeCallTarget = msg.getSender();
+                    updateCallControls();
+                    showInfo("Call connected with @" + activeCallTarget);
+                } else {
+                    Message rejectMsg = new Message(MessageType.CALL_REJECT, me, msg.getSender(), "rejected");
+                    wsService.sendMessage(rejectMsg);
+                }
+            });
+            return;
+        }
+
+        if (msg.getType() == MessageType.CALL_ANSWER) {
+            activeCallTarget = msg.getSender();
+            updateCallControls();
+            showInfo("@" + msg.getSender() + " accepted your call");
+            return;
+        }
+
+        if (msg.getType() == MessageType.CALL_REJECT) {
+            if (msg.getSender() != null && msg.getSender().equals(activeCallTarget)) {
+                activeCallTarget = null;
+                updateCallControls();
+            }
+            showInfo("@" + msg.getSender() + " rejected the call");
+            return;
+        }
+
+        if (msg.getType() == MessageType.CALL_END) {
+            if (msg.getSender() != null && msg.getSender().equals(activeCallTarget)) {
+                activeCallTarget = null;
+                updateCallControls();
+            }
+            showInfo("@" + msg.getSender() + " ended the call");
+        }
+    }
+
+    private void updateCallControls() {
+        boolean privateChat = privateTarget != null && !privateTarget.isBlank();
+        boolean inCall = activeCallTarget != null && !activeCallTarget.isBlank();
+
+        callVoiceButton.setManaged(privateChat && !inCall);
+        callVoiceButton.setVisible(privateChat && !inCall);
+
+        callVideoButton.setManaged(privateChat && !inCall);
+        callVideoButton.setVisible(privateChat && !inCall);
+
+        endCallButton.setManaged(inCall);
+        endCallButton.setVisible(inCall);
     }
 
     private void updateUserList(String csv) {
@@ -549,6 +688,7 @@ public class ChatController implements Initializable {
             }
             for (Map<String, Object> raw : rawHistory) {
                 Message msg = toMessage(raw);
+                cacheHistoryReactions(raw, msg != null ? msg.getId() : null);
                 if (msg != null && shouldDisplayMessage(msg)) {
                     displayMessage(msg, true);
                 }
@@ -592,6 +732,92 @@ public class ChatController implements Initializable {
     private void clearMessages() {
         messagesBox.getChildren().clear();
         receiptStatusByMessageId.clear();
+        reactionsByMessageId.clear();
+    }
+
+    private void attachReactionMenu(Label contentLabel, VBox bubble, Message msg) {
+        if (msg == null || msg.getId() == null || msg.getId().isBlank()) {
+            return;
+        }
+
+        ContextMenu menu = new ContextMenu();
+        menu.getItems().add(createReactionMenuItem("❤️", msg.getId(), bubble));
+        menu.getItems().add(createReactionMenuItem("😂", msg.getId(), bubble));
+        menu.getItems().add(createReactionMenuItem("🔥", msg.getId(), bubble));
+        menu.getItems().add(createReactionMenuItem("👍", msg.getId(), bubble));
+        contentLabel.setContextMenu(menu);
+    }
+
+    private MenuItem createReactionMenuItem(String emoji, String messageId, VBox bubble) {
+        MenuItem item = new MenuItem("React " + emoji);
+        item.setOnAction(e -> addReaction(messageId, emoji, bubble));
+        return item;
+    }
+
+    private void addReaction(String messageId, String emoji, VBox bubble) {
+        String username = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                apiService.addReaction(messageId, username, emoji);
+                Platform.runLater(() -> {
+                    reactionsByMessageId.computeIfAbsent(messageId, k -> new ArrayList<>()).add(emoji);
+                    upsertReactionLabel(bubble, messageId);
+                });
+            } catch (IOException ex) {
+                Platform.runLater(() -> showError("Failed to react: " + ex.getMessage()));
+            }
+        });
+    }
+
+    private void addReactionBadgeIfPresent(VBox bubble, String messageId) {
+        if (messageId == null || messageId.isBlank() || !reactionsByMessageId.containsKey(messageId)) {
+            return;
+        }
+        upsertReactionLabel(bubble, messageId);
+    }
+
+    private void upsertReactionLabel(VBox bubble, String messageId) {
+        List<String> reactions = reactionsByMessageId.get(messageId);
+        if (reactions == null || reactions.isEmpty()) {
+            return;
+        }
+
+        Label reactionLabel = null;
+        for (int i = 0; i < bubble.getChildren().size(); i++) {
+            if (bubble.getChildren().get(i) instanceof Label l && l.getStyleClass().contains("msg-reactions")) {
+                reactionLabel = l;
+                break;
+            }
+        }
+        if (reactionLabel == null) {
+            reactionLabel = new Label();
+            reactionLabel.getStyleClass().add("msg-reactions");
+            bubble.getChildren().add(reactionLabel);
+        }
+        reactionLabel.setText(String.join(" ", reactions));
+    }
+
+    private void cacheHistoryReactions(Map<String, Object> raw, String messageId) {
+        if (messageId == null || messageId.isBlank() || raw == null) {
+            return;
+        }
+        Object value = raw.get("reactions");
+        if (!(value instanceof List<?> list)) {
+            return;
+        }
+
+        List<String> emojis = new ArrayList<>();
+        for (Object item : list) {
+            if (item instanceof Map<?, ?> reactionMap) {
+                Object emoji = reactionMap.get("emoji");
+                if (emoji != null && !emoji.toString().isBlank()) {
+                    emojis.add(emoji.toString());
+                }
+            }
+        }
+        if (!emojis.isEmpty()) {
+            reactionsByMessageId.put(messageId, emojis);
+        }
     }
 
     private void showError(String message) {
