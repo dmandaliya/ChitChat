@@ -64,6 +64,18 @@ public class WebSocketService {
     }
 
     private synchronized void openConnection(String serverUrl, String username) {
+        if (wsClient != null && wsClient.isOpen()) {
+            return;
+        }
+        if (wsClient != null) {
+            try {
+                wsClient.close();
+            } catch (Exception ignored) {
+                // Reconnect flow should continue even if cleanup fails.
+            }
+            wsClient = null;
+        }
+
         try {
             // SockJS info endpoint returns a raw WS URL like ws://host/ws/{serverid}/{sessionid}/websocket
             String wsUrl = serverUrl

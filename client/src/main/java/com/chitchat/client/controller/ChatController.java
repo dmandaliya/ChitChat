@@ -92,6 +92,8 @@ public class ChatController implements Initializable {
     private final Map<String, Boolean> friendOnline = new HashMap<>();
     private final Map<String, Integer> friendUnread = new HashMap<>();
     private final Map<String, LocalDateTime> friendLastActivity = new HashMap<>();
+    private final Map<String, String> friendLastPreview = new HashMap<>();
+    private final Map<String, Long> friendTypingUntil = new HashMap<>();
     private final List<String> friendUsernames = new ArrayList<>();
     private final Map<String, String> roomIdToName = new HashMap<>();
     private final Map<String, Integer> roomUnread = new HashMap<>();
@@ -420,10 +422,14 @@ public class ChatController implements Initializable {
 
         String typingState = msg.getContent() != null ? msg.getContent().trim().toLowerCase() : "typing";
         if ("stopped".equals(typingState)) {
+            friendTypingUntil.remove(msg.getSender());
+            renderFriendList();
             clearTypingIndicator();
             return;
         }
 
+        friendTypingUntil.put(msg.getSender(), System.currentTimeMillis() + 3000);
+        renderFriendList();
         typingIndicatorLabel.setManaged(true);
         typingIndicatorLabel.setVisible(true);
         typingIndicatorLabel.setText(privateTarget + " is typing...");
@@ -461,6 +467,8 @@ public class ChatController implements Initializable {
         String me = UserSession.getInstance().getUsername();
         boolean fromActiveUser = privateTarget.equals(msg.getSender()) && me.equals(msg.getReceiver());
         if (fromActiveUser) {
+            friendTypingUntil.remove(msg.getSender());
+            renderFriendList();
             clearTypingIndicator();
         }
     }
@@ -529,7 +537,8 @@ public class ChatController implements Initializable {
         }
 
         String content = msg.getContent() != null ? msg.getContent() : "";
-        String preview = content.length() > 120 ? content.substring(0, 120) + "..." : content;
+        String base = isImagePayload(content) ? "Photo" : content;
+        String preview = base.length() > 120 ? base.substring(0, 120) + "..." : base;
         if (trayIcon != null) {
             trayIcon.displayMessage(title, preview, TrayIcon.MessageType.NONE);
         }
@@ -1038,6 +1047,14 @@ public class ChatController implements Initializable {
         return type + "|" + sender + "|" + receiver + "|" + roomId + "|" + timestamp + "|" + content;
     }
 
+    private String toPreviewText(String content) {
+        if (content == null || content.isBlank()) {
+            return "";
+        }
+        String preview = isImagePayload(content) ? "Photo" : content.trim().replaceAll("\\s+", " ");
+        return preview.length() > 26 ? preview.substring(0, 26) + "..." : preview;
+    }
+
     private void attachReactionMenu(Label contentLabel, VBox bubble, Message msg) {
         if (msg == null || msg.getId() == null || msg.getId().isBlank()) {
             return;
@@ -1393,6 +1410,7 @@ public class ChatController implements Initializable {
             }
 
             friendLastActivity.put(other, activityTime);
+            friendLastPreview.put(other, toPreviewText(msg.getContent()));
             if (!me.equals(msg.getSender()) && (privateTarget == null || !privateTarget.equals(other))) {
                 friendUnread.put(other, friendUnread.getOrDefault(other, 0) + 1);
             }
@@ -1426,12 +1444,20 @@ public class ChatController implements Initializable {
             .thenComparing(u -> u.toLowerCase()));
 
         String displayToSelect = null;
+        long now = System.currentTimeMillis();
         for (String username : ordered) {
             int unread = friendUnread.getOrDefault(username, 0);
             boolean online = friendOnline.getOrDefault(username, false);
+            Long typingUntil = friendTypingUntil.get(username);
+            boolean typing = typingUntil != null && typingUntil > now;
+            if (typingUntil != null && typingUntil <= now) {
+                friendTypingUntil.remove(username);
+            }
+            String preview = typing ? "typing..." : friendLastPreview.getOrDefault(username, "");
             String display = username
                     + (activePreferences.isOnlineStatus() ? (online ? " ●" : "") : "")
-                    + (unread > 0 ? " (" + unread + ")" : "");
+                    + (unread > 0 ? " (" + unread + ")" : "")
+                    + (!preview.isBlank() ? " - " + preview : "");
             friendDisplayToUsername.put(display, username);
             userListView.getItems().add(display);
             if (selectedUser != null && selectedUser.equals(username)) {
