@@ -21,4 +21,12 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, String
 
     // Last 50 room messages
     List<ChatMessage> findTop50ByRoomIdOrderByTimestampAsc(String roomId);
+
+    // Keyword search within a private conversation
+    @Query("SELECT m FROM ChatMessage m WHERE m.type = 'PRIVATE_MESSAGE' " +
+           "AND ((m.sender = :u1 AND m.receiver = :u2) OR (m.sender = :u2 AND m.receiver = :u1)) " +
+           "AND LOWER(m.content) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "ORDER BY m.timestamp ASC")
+    List<ChatMessage> searchPrivateMessages(@Param("u1") String u1, @Param("u2") String u2,
+                                            @Param("q") String q);
 }

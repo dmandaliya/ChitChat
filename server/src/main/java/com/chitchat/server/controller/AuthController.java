@@ -1,6 +1,7 @@
 package com.chitchat.server.controller;
 
 import com.chitchat.server.model.UserEntity;
+import com.chitchat.server.service.JwtUtil;
 import com.chitchat.server.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,9 +14,11 @@ import java.util.Map;
 public class AuthController {
 
     private final UserService userService;
+    private final JwtUtil jwtUtil;
 
-    public AuthController(UserService userService) {
+    public AuthController(UserService userService, JwtUtil jwtUtil) {
         this.userService = userService;
+        this.jwtUtil = jwtUtil;
     }
 
     @PostMapping("/register")
@@ -55,7 +58,8 @@ public class AuthController {
                 "fname", user.getFname(),
                 "lname", user.getLname(),
                 "username", user.getUsername(),
-                "lastOnline", user.getLastOnline() != null ? user.getLastOnline() : ""
+                "lastOnline", user.getLastOnline() != null ? user.getLastOnline() : "",
+                "token", jwtUtil.generateToken(user.getUsername())
         );
     }
 }

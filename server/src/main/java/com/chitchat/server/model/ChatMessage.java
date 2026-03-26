@@ -25,6 +25,9 @@ public class ChatMessage {
 
     private LocalDateTime timestamp;
 
+    private boolean edited = false;
+    private boolean deleted = false;
+
     @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name = "message_id", referencedColumnName = "id", insertable = false, updatable = false)
     private List<MessageReaction> reactions = new ArrayList<>();
@@ -51,6 +54,12 @@ public class ChatMessage {
 
     public LocalDateTime getTimestamp() { return timestamp; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+
+    public boolean isEdited() { return edited; }
+    public void setEdited(boolean edited) { this.edited = edited; }
+
+    public boolean isDeleted() { return deleted; }
+    public void setDeleted(boolean deleted) { this.deleted = deleted; }
 
     public List<MessageReaction> getReactions() { return reactions; }
 }

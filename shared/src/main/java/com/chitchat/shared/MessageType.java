@@ -16,5 +16,7 @@ public enum MessageType {
     CALL_END,
     CALL_REJECT,
     TYPING,
-    ERROR
+    ERROR,
+    MESSAGE_EDITED,
+    MESSAGE_DELETED
 }

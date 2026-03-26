@@ -42,4 +42,30 @@ public class ChatMessageService {
     public List<ChatMessage> getRoomHistory(String roomId) {
         return repo.findTop50ByRoomIdOrderByTimestampAsc(roomId);
     }
+
+    public ChatMessage editMessage(String id, String newContent, String requestingUser) {
+        ChatMessage msg = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Message not found: " + id));
+        if (!msg.getSender().equals(requestingUser)) {
+            throw new IllegalArgumentException("Cannot edit another user's message");
+        }
+        msg.setContent(newContent);
+        msg.setEdited(true);
+        return repo.save(msg);
+    }
+
+    public ChatMessage deleteMessage(String id, String requestingUser) {
+        ChatMessage msg = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Message not found: " + id));
+        if (!msg.getSender().equals(requestingUser)) {
+            throw new IllegalArgumentException("Cannot delete another user's message");
+        }
+        msg.setContent("Message deleted");
+        msg.setDeleted(true);
+        return repo.save(msg);
+    }
+
+    public List<ChatMessage> searchPrivateMessages(String user1, String user2, String keyword) {
+        return repo.searchPrivateMessages(user1, user2, keyword);
+    }
 }
