@@ -441,6 +441,7 @@ function connect(){
     loadRooms();
     setInterval(loadFriendRequests,15000);
     setInterval(loadFriends,10000);
+    setInterval(loadRooms,10000);
   }, function(){
     setConnectionStatus(false);
     setTimeout(function(){ connect(); }, reconnectDelay);
