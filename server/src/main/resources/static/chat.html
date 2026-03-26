@@ -195,11 +195,26 @@
   </div>
 </div>
 
+<!-- Search modal -->
+<div id="search-modal" class="modal hidden">
+  <div class="modal-card" style="max-width:460px">
+    <h3>Search Messages</h3>
+    <input type="text" id="search-input" placeholder="Type a keyword…" oninput="runSearch(this.value)" autocomplete="off"/>
+    <div id="search-results" style="max-height:260px;overflow-y:auto;margin-top:6px"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="document.getElementById('search-modal').classList.add('hidden')">Close</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 <script>
 // ─── State ────────────────────────────────────────────────────────────────
 var stompClient=null,currentUser=null,chatMode='',peerConn=null,localStream=null,callTarget=null,incomingOffer=null;
+var jwtToken=sessionStorage.getItem('jwt')||'';
+function authHeaders(){return jwtToken?{'Content-Type':'application/json','Authorization':'Bearer '+jwtToken}:{'Content-Type':'application/json'};}
+function apiFetch(url,opts){opts=opts||{};opts.headers=Object.assign(authHeaders(),opts.headers||{});return fetch(url,opts);}
 var ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
 var roomSubscriptions={};
 var myFriends=[];
@@ -812,6 +827,14 @@ function displayMessage(msg){
     var replyBtn='<button class="btn-reply" onclick="setReply(\''+esc(msg.sender||'')+'\',\''+esc((msg.content||'').replace(/'/g,'\\'+'\''))+'\')">↩</button>';
     var metaTheirs=time?'<div class="msg-meta"><span class="msg-time">'+time+'</span></div>':'';
     var metaMine='<div class="msg-meta">'+(msg.pending?'<span class="msg-time" style="color:var(--text-muted)">sending\u2026</span>':(time?'<span class="msg-time">'+time+'</span>':''))+(msg.id?'<span class="read-receipt">\u2713</span>':'')+'</div>';
+    var editedMark=msg.edited?'<span class="msg-edited"> (edited)</span>':'';
+    var editedContent=(msg.deleted?'<em style="opacity:.5">Message deleted</em>':contentHtml)+editedMark;
+    var editBtns=msg.id&&isMine&&!msg.deleted?
+      '<div class="msg-edit-btns">'+
+        '<button onclick="editMessage(\''+msg.id+'\',\''+esc((msg.content||'').replace(/'/g,'\\\''))+'\')">✏️</button>'+
+        '<button onclick="deleteMessage(\''+msg.id+'\')">🗑️</button>'+
+      '</div>':'';
+    if(msg.id) wrap.id='msg-'+msg.id;
     if(!isMine){
       wrap.innerHTML=
         '<div class="msg-row">'+
@@ -819,7 +842,7 @@ function displayMessage(msg){
           '<div style="display:flex;flex-direction:column;max-width:100%">'+
             (label?'<span class="msg-sender">'+label+'</span>':'')+
             quoteHtml+
-            '<span class="msg-bubble msg-theirs'+(isPrivate?' msg-private':'')+'"'+bubbleHover+'>'+contentHtml+'</span>'+
+            '<span class="msg-bubble msg-theirs'+(isPrivate?' msg-private':'')+'"'+bubbleHover+'>'+editedContent+'</span>'+
             metaTheirs+
           '</div>'+
           replyBtn+
@@ -827,10 +850,11 @@ function displayMessage(msg){
     }else{
       wrap.innerHTML=
         '<div class="msg-row msg-row-mine">'+
+          editBtns+
           replyBtn+
           '<div style="display:flex;flex-direction:column;align-items:flex-end">'+
             quoteHtml+
-            '<span class="msg-bubble msg-mine"'+bubbleHover+'>'+contentHtml+'</span>'+
+            '<span class="msg-bubble msg-mine"'+bubbleHover+'>'+editedContent+'</span>'+
             metaMine+
           '</div>'+
         '</div>';
@@ -892,6 +916,7 @@ function setPrivateChat(username){
     document.getElementById('chat-header-name').textContent=username;
     document.getElementById('chat-header-status').innerHTML=isOnline?'<span style="color:#22c55e">\u25cf Online</span>':'<span style="color:var(--text-muted)">Offline</span>';
     document.getElementById('chat-header-actions').innerHTML=
+      '<button class="btn-call-icon" title="Search messages" onclick="openSearch()">🔍</button>'+
       '<button class="btn-call-icon" title="Voice call" onclick="startCall(\''+esc(username)+'\',false)">📞</button>'+
       '<button class="btn-call-icon" title="Video call" onclick="startCall(\''+esc(username)+'\',true)">🎥</button>';
     document.getElementById('messages').innerHTML='';
@@ -1079,7 +1104,70 @@ function toggleCamera(){if(!localStream)return;localStream.getVideoTracks().forE
 async function logout(){
   if(stompClient){stompClient.send('/app/chat.leave',{},JSON.stringify({type:'LOGOUT',sender:currentUser.username,receiver:null,content:''}));stompClient.disconnect();}
   await fetch('/api/auth/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:currentUser.username})});
-  sessionStorage.removeItem('user');window.location.href='index.html';
+  sessionStorage.removeItem('user');
+  sessionStorage.removeItem('jwt');
+  window.location.href='index.html';
+}
+
+// ─── Message Edit & Delete ────────────────────────────────────────────────
+function editMessage(id,oldContent){
+  var newContent=prompt('Edit message:',oldContent);
+  if(!newContent||newContent===oldContent)return;
+  apiFetch('/api/messages/'+id,{
+    method:'PUT',
+    body:JSON.stringify({content:newContent,username:currentUser.username})
+  }).then(function(r){
+    if(r.ok){
+      var el=document.getElementById('msg-'+id);
+      if(el){el.querySelector('.msg-bubble').childNodes[0].textContent=newContent;var ed=el.querySelector('.msg-edited');if(!ed){var s=document.createElement('span');s.className='msg-edited';s.textContent=' (edited)';el.querySelector('.msg-bubble').appendChild(s);}}
+    }
+  });
+}
+
+function deleteMessage(id){
+  if(!confirm('Delete this message for everyone?'))return;
+  apiFetch('/api/messages/'+id,{
+    method:'DELETE',
+    body:JSON.stringify({username:currentUser.username})
+  }).then(function(r){
+    if(r.ok){
+      var el=document.getElementById('msg-'+id);
+      if(el){var b=el.querySelector('.msg-bubble');if(b){b.innerHTML='<em style="opacity:.5">Message deleted</em>';b.style.background='var(--bg)';b.style.color='var(--text-muted)';}}
+    }
+  });
+}
+
+// ─── Message Search ───────────────────────────────────────────────────────
+var searchDebounce=null;
+function openSearch(){
+  document.getElementById('search-modal').classList.remove('hidden');
+  document.getElementById('search-input').value='';
+  document.getElementById('search-results').innerHTML='';
+  setTimeout(function(){document.getElementById('search-input').focus();},100);
+}
+
+function runSearch(q){
+  clearTimeout(searchDebounce);
+  var out=document.getElementById('search-results');
+  if(!q){out.innerHTML='';return;}
+  searchDebounce=setTimeout(async function(){
+    if(!chatMode.startsWith('private:'))return;
+    var other=chatMode.split(':')[1];
+    var res=await apiFetch('/api/messages/search?user1='+encodeURIComponent(currentUser.username)+'&user2='+encodeURIComponent(other)+'&q='+encodeURIComponent(q));
+    if(!res.ok){out.innerHTML='<div style="color:var(--text-muted);font-size:.82rem;padding:8px 0">No results</div>';return;}
+    var msgs=await res.json();
+    if(!msgs.length){out.innerHTML='<div style="color:var(--text-muted);font-size:.82rem;padding:8px 0">No results found</div>';return;}
+    out.innerHTML='';
+    msgs.forEach(function(m){
+      var d=document.createElement('div');
+      d.style.cssText='padding:8px 6px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:6px;';
+      d.innerHTML='<div style="font-size:.72rem;color:var(--text-muted);margin-bottom:2px">'+esc(m.sender)+' &bull; '+formatTime(m.timestamp)+'</div>'+
+        '<div style="font-size:.88rem">'+esc(m.content)+'</div>';
+      d.onmouseover=function(){d.style.background='var(--bg)';};
+      d.onmouseout=function(){d.style.background='';};
+      out.appendChild(d);
+    });
+  },300);
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}

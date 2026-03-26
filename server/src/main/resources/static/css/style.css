@@ -659,6 +659,16 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .profile-pic-upload:hover { background: var(--bg); border-color: var(--primary); }
 .profile-pic-upload span { font-size: .82rem; color: var(--text-muted); }
 
+/* ===== Edit/delete buttons on messages ===== */
+.msg-edit-btns { display:flex;gap:2px;opacity:0;transition:opacity .15s;flex-shrink:0; }
+.msg-row-mine:hover .msg-edit-btns { opacity:1; }
+.msg-edit-btns button { background:none;border:none;cursor:pointer;font-size:.75rem;padding:2px 4px;border-radius:4px; }
+.msg-edit-btns button:hover { background:var(--bg); }
+.msg-edited { font-size:.65rem;opacity:.55;margin-left:4px; }
+
+/* ===== Search result hover ===== */
+#search-results div:hover { background:var(--bg); }
+
 /* ===== Background presets ===== */
 .bg-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .bg-preset {
