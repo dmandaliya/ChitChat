@@ -144,10 +144,10 @@ None currently blocking cross-platform testing.
 
 ## Architecture & Key Implementation Details
 
-### Server Configuration (Render)
-- **URL**: https://chitchat-moy8.onrender.com
+### Server Configuration (DigitalOcean)
+- **URL**: https://chitchat-pidj7.ondigitalocean.app
 - **Backend**: Spring Boot 3.4.3
-- **Database**: PostgreSQL (Render-managed)
+- **Database**: PostgreSQL (DigitalOcean-managed)
 - **Protocol**: STOMP WebSocket + REST HTTP
 
 ### Client Architecture (Desktop)

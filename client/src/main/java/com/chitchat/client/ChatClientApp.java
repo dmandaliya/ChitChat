@@ -9,7 +9,7 @@ import javafx.stage.Stage;
 
 public class ChatClientApp extends Application {
 
-    private static final String DEFAULT_SERVER_URL = "https://chitchat-moy8.onrender.com";
+    private static final String DEFAULT_SERVER_URL = "https://chitchat-pidj7.ondigitalocean.app";
     public static final String SERVER_URL = resolveServerUrl();
 
     private static String resolveServerUrl() {
