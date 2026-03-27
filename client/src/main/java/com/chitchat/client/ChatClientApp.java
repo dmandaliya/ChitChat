@@ -9,7 +9,7 @@ import javafx.stage.Stage;
 
 public class ChatClientApp extends Application {
 
-    private static final String DEFAULT_SERVER_URL = "http://localhost:8080";
+    private static final String DEFAULT_SERVER_URL = "https://chitchat-moy8.onrender.com";
     public static final String SERVER_URL = resolveServerUrl();
 
     private static String resolveServerUrl() {
