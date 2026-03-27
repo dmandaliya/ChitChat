@@ -292,7 +292,7 @@ function uploadOwnPic(input){
       ctx.drawImage(img,(w-s)/2,(h-s)/2,s,s,0,0,MAX,MAX);
       var b64=canvas.toDataURL('image/jpeg',0.8);
       localStorage.setItem('pic_'+currentUser.username,b64);
-      renderRailAvatar();
+      renderUserInfo();
       renderSettingsOwnAvatar();
       renderFriendList();
       apiFetch('/api/users/'+encodeURIComponent(currentUser.username)+'/avatar',{
@@ -397,13 +397,30 @@ if(!ud){window.location.href='index.html';}
 currentUser=JSON.parse(ud);
 nameMap[currentUser.username]={fname:currentUser.fname||'',lname:currentUser.lname||''};
 if(currentUser.avatarUrl) localStorage.setItem('pic_'+currentUser.username,currentUser.avatarUrl);
-document.getElementById('user-info').innerHTML=
-  '<div style="display:flex;align-items:center;gap:8px">'+
-  avatarHtml(currentUser.username,'34px')+
-  '<div><div style="font-weight:600;color:#e8f1f2;font-size:.85rem">'+esc(currentUser.fname)+' '+esc(currentUser.lname)+'</div>'+
-  '<div style="font-size:.72rem;color:var(--gray)">@'+esc(currentUser.username)+'</div></div></div>';
-renderRailAvatar();
+
+function renderUserInfo(){
+  document.getElementById('user-info').innerHTML=
+    '<div style="display:flex;align-items:center;gap:8px">'+
+    avatarHtml(currentUser.username,'34px')+
+    '<div><div style="font-weight:600;color:#e8f1f2;font-size:.85rem">'+esc(currentUser.fname)+' '+esc(currentUser.lname)+'</div>'+
+    '<div style="font-size:.72rem;color:var(--gray)">@'+esc(currentUser.username)+'</div></div></div>';
+  renderRailAvatar();
+}
+renderUserInfo();
 applyBackground();
+
+// Fetch own avatar from server on load if not cached locally
+if(!localStorage.getItem('pic_'+currentUser.username)){
+  fetch('/api/users/'+encodeURIComponent(currentUser.username)+'/profile')
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(p){
+      if(p&&p.avatarUrl){
+        localStorage.setItem('pic_'+currentUser.username,p.avatarUrl);
+        renderUserInfo();
+        renderSettingsOwnAvatar();
+      }
+    });
+}
 
 // ─── Emoji picker ─────────────────────────────────────────────────────────
 var EMOJI_CATS=[
