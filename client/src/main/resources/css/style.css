@@ -180,30 +180,41 @@
   -fx-border-color: transparent;
 }
 
-.btn-header-icon {
+.btn-icon {
   -fx-background-color: transparent;
   -fx-text-fill: #bdbdbd;
   -fx-border-color: transparent;
-  -fx-padding: 4 8;
+  -fx-padding: 8 12;
   -fx-cursor: hand;
   -fx-background-radius: 6;
-  -fx-font-size: 16px;
+  -fx-font-size: 18px;
+  -fx-min-width: 40;
+  -fx-min-height: 40;
 }
-.btn-header-icon:hover {
-  -fx-background-color: #333333;
-  -fx-text-fill: #ffb3c1;
+.btn-icon:hover {
+  -fx-background-color: #e8f1f2;
+  -fx-text-fill: #1c1c1c;
+}
+
+.btn-logout-danger:hover {
+  -fx-background-color: #ef4444;
+  -fx-text-fill: white;
 }
 
 /* Dark theme variants */
 .chat-root.pref-dark .sidebar-header {
   -fx-background-color: #1f2937;
 }
-.chat-root.pref-dark .btn-header-icon {
+.chat-root.pref-dark .btn-icon {
   -fx-text-fill: #9ca3af;
 }
-.chat-root.pref-dark .btn-header-icon:hover {
+.chat-root.pref-dark .btn-icon:hover {
   -fx-background-color: #374151;
-  -fx-text-fill: #f97316;
+  -fx-text-fill: #e5e7eb;
+}
+.chat-root.pref-dark .btn-logout-danger:hover {
+  -fx-background-color: #ef4444;
+  -fx-text-fill: white;
 }
 
 .brand-small {

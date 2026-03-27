@@ -20,18 +20,18 @@
     </VBox>
 
     <!-- Header Line 2: Action Buttons -->
-    <HBox alignment="CENTER" spacing="8">
+    <HBox alignment="CENTER" spacing="0">
       <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
-      <Button text="⚙" onAction="#handlePreferences" styleClass="btn-header-icon">
+      <Button text="⚙" onAction="#handlePreferences" styleClass="btn-icon">
         <tooltip><Tooltip text="Preferences"/></tooltip>
       </Button>
-      <Button text="⛔" onAction="#handleBlockedUsers" styleClass="btn-header-icon">
+      <Button text="⛔" onAction="#handleBlockedUsers" styleClass="btn-icon">
         <tooltip><Tooltip text="Blocked Users"/></tooltip>
       </Button>
-      <Button text="👤" onAction="#handleProfile" styleClass="btn-header-icon">
+      <Button text="👤" onAction="#handleProfile" styleClass="btn-icon">
         <tooltip><Tooltip text="Profile"/></tooltip>
       </Button>
-      <Button text="✕" onAction="#handleLogout" styleClass="btn-header-icon">
+      <Button text="✕" onAction="#handleLogout" styleClass="btn-icon btn-logout-danger">
         <tooltip><Tooltip text="Logout"/></tooltip>
       </Button>
     </HBox>

@@ -384,7 +384,12 @@ public class ChatController implements Initializable {
         }
 
         messagesBox.getChildren().add(row);
-        messagesScroll.setVvalue(1.0);
+        // Auto-scroll to latest message only for new messages (not history)
+        if (!fromHistory) {
+            PauseTransition delay = new PauseTransition(Duration.millis(50));
+            delay.setOnFinished(e -> Platform.runLater(() -> messagesScroll.setVvalue(1.0)));
+            delay.play();
+        }
     }
 
     private boolean shouldDisplayMessage(Message msg) {
@@ -984,6 +989,10 @@ public class ChatController implements Initializable {
                     displayMessage(msg, true);
                 }
             }
+            // Scroll to bottom after all history is loaded
+            PauseTransition delay = new PauseTransition(Duration.millis(50));
+            delay.setOnFinished(e -> Platform.runLater(() -> messagesScroll.setVvalue(1.0)));
+            delay.play();
         } finally {
             loadingHistory = false;
         }
