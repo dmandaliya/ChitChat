@@ -212,6 +212,7 @@
 <script>
 // ─── State ────────────────────────────────────────────────────────────────
 var stompClient=null,currentUser=null,chatMode='',peerConn=null,localStream=null,callTarget=null,incomingOffer=null;
+var pendingQueue=[];
 var jwtToken=sessionStorage.getItem('jwt')||'';
 function authHeaders(){return jwtToken?{'Content-Type':'application/json','Authorization':'Bearer '+jwtToken}:{'Content-Type':'application/json'};}
 function apiFetch(url,opts){opts=opts||{};opts.headers=Object.assign(authHeaders(),opts.headers||{});return fetch(url,opts);}
@@ -666,6 +667,19 @@ function handleMessage(msg){
     if(el){var b=el.querySelector('.msg-bubble');if(b){b.innerHTML='<em style="opacity:.5">Message deleted</em>';b.style.background='var(--bg)';b.style.color='var(--text-muted)';}}
     return;
   }
+  // Server echo for our own private message — update pending bubble to "Sent"
+  if(msg.type==='PRIVATE_MESSAGE'&&msg.sender===currentUser.username&&msg.id&&pendingQueue.length>0){
+    var pendingEl=pendingQueue.shift();
+    pendingEl.id='msg-'+msg.id;
+    pendingEl.dataset.msgId=msg.id;
+    var meta=pendingEl.querySelector('.msg-meta');
+    if(meta){
+      var t=formatTime(msg.timestamp||msg.sentAt||null);
+      meta.innerHTML=(t?'<span class="msg-time">'+t+'</span>':'')+'<span class="msg-status-sent">Sent</span>';
+    }
+    updateLastMsg('private:'+msg.receiver,msg.content);
+    return;
+  }
   var convKey='';
   if(msg.type==='PRIVATE_MESSAGE'){
     convKey=msg.sender===currentUser.username?'private:'+msg.receiver:'private:'+msg.sender;
@@ -877,6 +891,7 @@ function displayMessage(msg){
     }
   }
   messages.appendChild(wrap);
+  if(msg.pending) pendingQueue.push(wrap);
   if(atBottom) messages.scrollTop=messages.scrollHeight;
 }
 

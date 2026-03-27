@@ -665,6 +665,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .msg-edit-btns button { background:none;border:none;cursor:pointer;font-size:.75rem;padding:2px 4px;border-radius:4px; }
 .msg-edit-btns button:hover { background:var(--bg); }
 .msg-edited { font-size:.65rem;opacity:.55;margin-left:4px; }
+.msg-status-sent { font-size:.6rem;color:var(--accent);opacity:.9; }
 
 /* ===== Search result hover ===== */
 #search-results div:hover { background:var(--bg); }
