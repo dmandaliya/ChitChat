@@ -304,7 +304,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   :root { --sidebar-width: 100vw; }
 
   /* Layout */
-  .icon-rail { display: none; }
+  .icon-rail { display: none !important; }
   .chat-layout { position: relative; overflow: hidden; }
   .sidebar {
     position: absolute; left: 0; top: 0; bottom: 0;
@@ -320,8 +320,12 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   #back-btn { display: flex !important; }
 
   /* Messages */
-  .messages { padding: .6rem .75rem; }
-  .msg-wrap { max-width: 82%; }
+  .messages { padding: .6rem .75rem; overflow-x: hidden; }
+  .msg-wrap { max-width: 80%; min-width: 0; }
+  .msg-bubble { max-width: 100%; word-break: break-word; }
+  .msg-image { max-width: 100%; width: auto; max-height: 220px; }
+  .msg-gif { max-width: 100%; }
+  .msg-row { max-width: 100%; min-width: 0; }
 
   /* Message bar — compact, scrollable extras */
   .message-bar {
@@ -382,7 +386,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   :root { --sidebar-width: 280px; }
 
   /* Slightly wider sidebar, hide icon rail to give more room */
-  .icon-rail { display: none; }
+  .icon-rail { display: none !important; }
 
   /* Bigger touch targets throughout */
   .user-list li { padding: .8rem 1rem; min-height: 56px; }
