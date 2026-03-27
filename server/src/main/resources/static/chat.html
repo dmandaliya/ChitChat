@@ -1335,9 +1335,8 @@ function editMessage(id,oldContent){
 
 function deleteMessage(id){
   if(!confirm('Delete this message for everyone?'))return;
-  apiFetch('/api/messages/'+id,{
-    method:'DELETE',
-    body:JSON.stringify({username:currentUser.username})
+  apiFetch('/api/messages/'+id+'?username='+encodeURIComponent(currentUser.username),{
+    method:'DELETE'
   }).then(function(r){
     if(r.ok){
       var el=document.getElementById('msg-'+id);
