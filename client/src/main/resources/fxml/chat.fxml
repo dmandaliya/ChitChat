@@ -86,13 +86,15 @@
     <Label fx:id="typingIndicatorLabel" styleClass="typing-indicator" visible="false" managed="false"/>
 
     <!-- Input bar -->
-    <HBox styleClass="message-bar" spacing="10" alignment="CENTER">
+    <HBox styleClass="message-bar" spacing="8" alignment="CENTER">
       <padding><Insets top="10" right="16" bottom="10" left="16"/></padding>
-      <TextField fx:id="messageInput" promptText="Type a message..."
+      <Button fx:id="attachImageButton" text="📎" onAction="#handleSendImage" styleClass="btn-attach" minWidth="36" minHeight="36"/>
+      <Button fx:id="gifButton" text="GIF" onAction="#handleSendGif" styleClass="btn-gif" minWidth="36" minHeight="36"/>
+      <Button fx:id="micButton" text="🎤" onAction="#handleVoiceRecord" styleClass="btn-attach" minWidth="36" minHeight="36"/>
+      <TextField fx:id="messageInput" promptText="Type a message…"
                  styleClass="msg-input" HBox.hgrow="ALWAYS"
                  onAction="#handleSend"/>
-      <Button fx:id="attachImageButton" text="🖼" onAction="#handleSendImage" styleClass="btn-attach"/>
-      <Button text="Send" onAction="#handleSend" styleClass="btn-send"/>
+      <Button text="➤" onAction="#handleSend" styleClass="btn-send" minWidth="42" minHeight="36"/>
     </HBox>
 
   </VBox>

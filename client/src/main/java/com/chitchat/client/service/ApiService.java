@@ -11,15 +11,30 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * HTTP client for all REST communication with the ChitChat server.
+ *
+ * Uses OkHttp3 for making requests and Jackson for JSON serialization/deserialization.
+ * Every public method in this class corresponds to one server endpoint. We keep the
+ * actual HTTP mechanics (building requests, reading responses, error handling) in a few
+ * private helpers at the bottom so the public API stays clean and readable.
+ *
+ * The baseUrl is injected at construction time so the same class works against
+ * localhost during development and the DigitalOcean backend in production.
+ */
 public class ApiService {
 
     private static final MediaType JSON = MediaType.get("application/json");
     private final OkHttpClient http = new OkHttpClient();
+
+    public OkHttpClient getHttp() { return http; }
     private final ObjectMapper mapper = new ObjectMapper();
     private final String baseUrl;
 
     public ApiService(String baseUrl) {
         this.baseUrl = baseUrl;
+        // Register JavaTimeModule so LocalDateTime fields serialize to ISO strings
+        // instead of numeric arrays, which is what the server expects.
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
@@ -141,6 +156,12 @@ public class ApiService {
         return getList("/api/messages/room/" + roomId);
     }
 
+    // ───── Private HTTP helpers ──────────────────────────────────────────────
+
+    // These helpers keep the public methods above free of boilerplate.
+    // All HTTP calls are synchronous — callers are expected to run them off
+    // the JavaFX Application Thread (e.g. inside a CompletableFuture).
+
     private Map<String, Object> post(String path, Object body) throws IOException {
         Request request = buildJsonRequest(baseUrl + path, "POST", body);
         return executeMap(request);
@@ -166,6 +187,8 @@ public class ApiService {
         return executeList(request);
     }
 
+    // Separate overload for cases where we need to build a URL with query parameters
+    // (search, private message history) before passing it to OkHttp.
     private List<Map<String, Object>> getListByUrl(HttpUrl url) throws IOException {
         Request request = new Request.Builder().url(url).get().build();
         return executeList(request);
@@ -190,6 +213,9 @@ public class ApiService {
         return builder.build();
     }
 
+    // Executes a request and deserializes the response body into a Map.
+    // If the server returns a non-2xx status, we pull the "error" field from the
+    // response body and throw it as an IOException so callers get a readable message.
     private Map<String, Object> executeMap(Request request) throws IOException {
         try (Response response = http.newCall(request).execute()) {
             String responseBody = response.body() != null ? response.body().string() : "{}";

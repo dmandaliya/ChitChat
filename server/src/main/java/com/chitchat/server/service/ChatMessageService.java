@@ -9,6 +9,14 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Handles saving and retrieving chat messages from the database.
+ *
+ * This service bridges the gap between the shared Message DTO (used for
+ * WebSocket transport) and the ChatMessage entity (stored in the DB).
+ * They're kept separate so we're free to evolve the DB schema without
+ * breaking the wire format, and vice versa.
+ */
 @Service
 public class ChatMessageService {
 
@@ -18,6 +26,16 @@ public class ChatMessageService {
         this.repo = repo;
     }
 
+    /**
+     * Converts a Message DTO to a ChatMessage entity and persists it.
+     *
+     * We skip messages without an ID — those are ephemeral events like typing
+     * indicators or read receipts that don't belong in the message history.
+     * The ID is assigned by ChatController before calling this method.
+     *
+     * If the message arrives without a timestamp (shouldn't normally happen),
+     * we default to the current server time rather than letting it stay null.
+     */
     public void save(Message msg) {
         if (msg.getId() == null) return;
         ChatMessage cm = new ChatMessage();
@@ -31,10 +49,14 @@ public class ChatMessageService {
         repo.save(cm);
     }
 
+    // Returns the last 50 public messages in chronological order.
+    // We cap at 50 to keep the initial load fast — older history isn't shown.
     public List<ChatMessage> getPublicHistory() {
         return repo.findTop50ByTypeOrderByTimestampAsc(MessageType.PUBLIC_MESSAGE);
     }
 
+    // Private history is bidirectional — we fetch messages where either user
+    // was the sender or receiver. See the custom query in ChatMessageRepository.
     public List<ChatMessage> getPrivateHistory(String user1, String user2) {
         return repo.findPrivateMessages(user1, user2);
     }

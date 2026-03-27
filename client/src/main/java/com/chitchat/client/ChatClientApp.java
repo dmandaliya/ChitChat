@@ -23,7 +23,22 @@ public class ChatClientApp extends Application {
             return fromEnv.trim();
         }
 
-        return DEFAULT_SERVER_URL;
+        // Auto-detect: prefer cloud, fall back to localhost if cloud is unreachable
+        try {
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection)
+                    new java.net.URL(DEFAULT_SERVER_URL + "/api/users/search?q=ping").openConnection();
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(3000);
+            conn.setRequestMethod("GET");
+            int code = conn.getResponseCode();
+            if (code >= 200 && code < 500) {
+                System.out.println("[ChitChat] Using cloud server: " + DEFAULT_SERVER_URL);
+                return DEFAULT_SERVER_URL;
+            }
+        } catch (Exception ignored) {}
+
+        System.out.println("[ChitChat] Cloud unreachable — falling back to localhost:8080");
+        return "http://localhost:8080";
     }
 
     @Override

@@ -464,11 +464,24 @@
 .btn-attach {
   -fx-background-color: #e8f1f2;
   -fx-text-fill: #1c1c1c;
-  -fx-background-radius: 24;
-  -fx-padding: 9 12;
+  -fx-background-radius: 50%;
+  -fx-padding: 0;
   -fx-cursor: hand;
+  -fx-font-size: 15px;
 }
 .btn-attach:hover { -fx-background-color: #d6e7e9; }
+
+.btn-gif {
+  -fx-background-color: #fff685;
+  -fx-text-fill: #1c1c1c;
+  -fx-font-weight: bold;
+  -fx-font-size: 11px;
+  -fx-background-radius: 50%;
+  -fx-padding: 0;
+  -fx-cursor: hand;
+}
+.btn-gif:hover { -fx-background-color: #f5dd00; }
+.btn-gif.recording { -fx-background-color: #ef4444; -fx-text-fill: white; }
 
 /* ===== Status Dialogs ===== */
 .status-dialog-root {
@@ -509,4 +522,81 @@
 .status-dialog-root.pref-dark .status-dialog-message {
   -fx-text-fill: #e5e7eb;
   -fx-fill: #e5e7eb;
+}
+
+/* ===== Friend List Custom Cells ===== */
+.friend-cell {
+  -fx-padding: 6 12;
+}
+.friend-name {
+  -fx-font-weight: bold;
+  -fx-font-size: 13px;
+  -fx-text-fill: #e8f1f2;
+}
+.friend-preview {
+  -fx-font-size: 11px;
+  -fx-text-fill: #9ca3af;
+}
+.friend-typing {
+  -fx-font-size: 11px;
+  -fx-text-fill: #ffb3c1;
+  -fx-font-style: italic;
+}
+.chat-root.pref-dark .friend-name { -fx-text-fill: #e5e7eb; }
+.chat-root.pref-dark .friend-preview { -fx-text-fill: #6b7280; }
+
+/* ===== Message Status ===== */
+.msg-status-sending {
+  -fx-font-size: 10px;
+  -fx-text-fill: #bdbdbd;
+  -fx-padding: 0 2;
+  -fx-font-style: italic;
+}
+.msg-status-sent {
+  -fx-font-size: 10px;
+  -fx-text-fill: #0f766e;
+  -fx-padding: 0 2;
+}
+
+/* ===== GIF picker ===== */
+.gif-grid {
+  -fx-background-color: #f5f5f5;
+  -fx-padding: 6;
+  -fx-hgap: 4;
+  -fx-vgap: 4;
+}
+.gif-thumb {
+  -fx-cursor: hand;
+  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 4, 0, 0, 1);
+  -fx-background-radius: 6;
+}
+.gif-thumb:hover {
+  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 8, 0, 0, 2);
+  -fx-scale-x: 1.04;
+  -fx-scale-y: 1.04;
+}
+
+/* ===== Audio message button ===== */
+.btn-audio {
+  -fx-background-color: #e8f1f2;
+  -fx-text-fill: #1c1c1c;
+  -fx-background-radius: 20;
+  -fx-padding: 8 16;
+  -fx-cursor: hand;
+  -fx-font-size: 13px;
+}
+.btn-audio:hover { -fx-background-color: #d6e7e9; }
+.chat-root.pref-dark .btn-audio {
+  -fx-background-color: #1f2937;
+  -fx-text-fill: #e5e7eb;
+}
+
+/* ===== Recording state ===== */
+.btn-recording {
+  -fx-background-color: #ef4444;
+  -fx-text-fill: white;
+  -fx-background-radius: 50%;
+  -fx-padding: 0;
+  -fx-cursor: hand;
+  -fx-font-size: 15px;
 }
