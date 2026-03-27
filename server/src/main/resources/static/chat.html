@@ -450,7 +450,6 @@ function connect(){
     stompClient.subscribe('/topic/user.'+currentUser.username,function(m){handleMessage(JSON.parse(m.body));});
     stompClient.subscribe('/topic/receipts.'+currentUser.username,function(m){handleReceipt(JSON.parse(m.body));});
     stompClient.subscribe('/topic/users',function(m){updateOnlineUsers(JSON.parse(m.body).content);});
-    stompClient.subscribe('/user/queue/call',function(m){handleCallSignal(JSON.parse(m.body));});
     stompClient.send('/app/chat.join',{},JSON.stringify({type:'LOGIN',sender:currentUser.username,receiver:null,content:''}));
     loadFriends();
     loadFriendRequests();
@@ -651,6 +650,7 @@ function sendMessage(e){
 function handleMessage(msg){
   if(msg.type==='USER_LIST'){updateOnlineUsers(msg.content);return;}
   if(msg.type==='TYPING'){showTypingIndicator(msg.sender);return;}
+  if(msg.type==='CALL_OFFER'||msg.type==='CALL_ANSWER'||msg.type==='CALL_ICE'||msg.type==='CALL_END'||msg.type==='CALL_REJECT'){handleCallSignal(msg);return;}
   if(msg.type==='MESSAGE_EDITED'&&msg.id){
     var el=document.getElementById('msg-'+msg.id);
     if(el){
