@@ -139,6 +139,7 @@ public class WebSocketService {
             // STOMP connected — subscribe and join
             wsClient.send("SUBSCRIBE\nid:sub-public\ndestination:/topic/public\n\n\u0000");
             wsClient.send("SUBSCRIBE\nid:sub-private\ndestination:/user/queue/private\n\n\u0000");
+            wsClient.send("SUBSCRIBE\nid:sub-user-topic\ndestination:/topic/user." + username + "\n\n\u0000");
             wsClient.send("SUBSCRIBE\nid:sub-users\ndestination:/topic/users\n\n\u0000");
             wsClient.send("SUBSCRIBE\nid:sub-receipts\ndestination:/user/queue/receipts\n\n\u0000");
             wsClient.send("SUBSCRIBE\nid:sub-call\ndestination:/user/queue/call\n\n\u0000");

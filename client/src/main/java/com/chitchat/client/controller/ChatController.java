@@ -30,7 +30,9 @@ import com.chitchat.shared.Message;
 import com.chitchat.shared.MessageType;
 import com.chitchat.shared.UserPreferences;
 
+import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -51,13 +53,16 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -86,6 +91,11 @@ public class ChatController implements Initializable {
     private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm");
     private final PauseTransition typingDebounce = new PauseTransition(Duration.millis(500));
     private final PauseTransition typingIndicatorTimeout = new PauseTransition(Duration.seconds(2.8));
+    private final Timeline rosterRefreshTimeline = new Timeline(
+            new KeyFrame(Duration.seconds(8), e -> {
+                loadFriends();
+                loadRooms();
+            }));
     private final Map<String, Label> receiptStatusByMessageId = new HashMap<>();
     private final Map<String, List<String>> reactionsByMessageId = new HashMap<>();
     private final Map<String, String> friendDisplayToUsername = new HashMap<>();
@@ -200,6 +210,9 @@ public class ChatController implements Initializable {
         loadRooms();
         loadPublicHistory();
         loadAndApplyPreferences();
+
+        rosterRefreshTimeline.setCycleCount(Timeline.INDEFINITE);
+        rosterRefreshTimeline.play();
     }
 
     @FXML
@@ -803,6 +816,8 @@ public class ChatController implements Initializable {
 
     @FXML
     private void handleLogout() {
+        rosterRefreshTimeline.stop();
+
         UserSession session = UserSession.getInstance();
         wsService.disconnect(session.getUsername());
         try {
@@ -829,16 +844,19 @@ public class ChatController implements Initializable {
             try {
                 List<Map<String, Object>> friends = apiService.getFriends(username);
                 Platform.runLater(() -> {
+                    String activePrivate = privateTarget;
                     friendUsernames.clear();
                     for (Map<String, Object> friend : friends) {
                         Object friendUsername = friend.get("username");
                         if (friendUsername != null) {
-                            String name = friendUsername.toString();
-                            friendUsernames.add(name);
-                            friendUnread.putIfAbsent(name, 0);
-                            friendLastActivity.putIfAbsent(name, LocalDateTime.MIN);
+                            ensureFriendTracked(friendUsername.toString());
                         }
                     }
+
+                    if (activePrivate != null && !activePrivate.isBlank()) {
+                        ensureFriendTracked(activePrivate);
+                    }
+
                     renderFriendList();
                 });
             } catch (IOException ignored) {
@@ -1141,17 +1159,72 @@ public class ChatController implements Initializable {
     }
 
     private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setHeaderText("Request failed");
-        alert.setContentText(message);
-        alert.showAndWait();
+        String safeMessage = (message == null || message.isBlank())
+                ? "An unexpected error occurred."
+                : message;
+        showStatusDialog("Request failed", safeMessage, true);
     }
 
     private void showInfo(String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setHeaderText("ChitChat");
-        alert.setContentText(message);
-        alert.showAndWait();
+        String safeMessage = (message == null || message.isBlank())
+                ? "Action completed successfully."
+                : message;
+        showStatusDialog("Notice", safeMessage, false);
+    }
+
+    private void showStatusDialog(String header, String message, boolean errorStyle) {
+        Runnable uiTask = () -> {
+            Stage dialog = new Stage();
+            dialog.setTitle("ChitChat");
+            dialog.initModality(Modality.APPLICATION_MODAL);
+            dialog.setResizable(false);
+            if (chatRoot != null && chatRoot.getScene() != null) {
+                dialog.initOwner(chatRoot.getScene().getWindow());
+            }
+
+            Text headerLabel = new Text(header);
+            headerLabel.getStyleClass().add("status-dialog-header");
+
+            Text messageLabel = new Text(message);
+            messageLabel.getStyleClass().add("status-dialog-message");
+            messageLabel.setWrappingWidth(380);
+
+            Button okButton = new Button("OK");
+            okButton.setDefaultButton(true);
+            okButton.setOnAction(e -> dialog.close());
+            okButton.getStyleClass().add("status-dialog-ok");
+            if (errorStyle) {
+                okButton.getStyleClass().add("status-dialog-ok-error");
+            }
+
+            HBox actions = new HBox(okButton);
+            actions.setAlignment(Pos.CENTER_RIGHT);
+
+            VBox root = new VBox(12, headerLabel, messageLabel, actions);
+            root.setPadding(new Insets(16));
+            root.getStyleClass().add("status-dialog-root");
+            if (chatRoot != null) {
+                for (String className : chatRoot.getStyleClass()) {
+                    if (className.startsWith("pref-")) {
+                        root.getStyleClass().add(className);
+                    }
+                }
+            }
+
+            Scene scene = new Scene(root, 420, Region.USE_COMPUTED_SIZE);
+            URL css = getClass().getResource("/css/style.css");
+            if (css != null) {
+                scene.getStylesheets().add(css.toExternalForm());
+            }
+            dialog.setScene(scene);
+            dialog.showAndWait();
+        };
+
+        if (Platform.isFxApplicationThread()) {
+            uiTask.run();
+        } else {
+            Platform.runLater(uiTask);
+        }
     }
 
     private void showFriendRequestsDialog(List<Map<String, Object>> pending) {
@@ -1210,29 +1283,50 @@ public class ChatController implements Initializable {
 
     private void showAddFriendDialog() {
         Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Add Friend");
-        dialog.setHeaderText("Search users and send a friend request");
+        dialog.setTitle("Edit Friends");
+        dialog.setHeaderText("Send requests or remove existing friends");
 
         TextField searchField = new TextField();
         searchField.setPromptText("Search by username or name");
 
         ListView<String> resultsList = new ListView<>();
-        resultsList.setPrefHeight(220);
+        resultsList.setPrefHeight(180);
 
         Label hint = new Label("Type at least 2 characters to search.");
 
-        VBox content = new VBox(10, searchField, hint, resultsList);
+        ListView<String> currentFriendsList = new ListView<>();
+        currentFriendsList.setPrefHeight(150);
+        List<String> currentFriends = new ArrayList<>(friendUsernames);
+        currentFriends.sort(String::compareToIgnoreCase);
+        currentFriendsList.getItems().addAll(currentFriends);
+
+        Label removeHint = new Label(currentFriends.isEmpty()
+                ? "No friends to remove yet."
+                : "Select a friend and click Remove Friend.");
+
+        VBox content = new VBox(10,
+                new Label("Add / Request Friends"),
+                searchField,
+                hint,
+                resultsList,
+                new Separator(),
+                new Label("Current Friends"),
+                removeHint,
+                currentFriendsList);
         dialog.getDialogPane().setContent(content);
 
         ButtonType searchType = new ButtonType("Search");
         ButtonType sendType = new ButtonType("Send Request");
-        dialog.getDialogPane().getButtonTypes().addAll(searchType, sendType, ButtonType.CLOSE);
+        ButtonType removeType = new ButtonType("Remove Friend");
+        dialog.getDialogPane().getButtonTypes().addAll(searchType, sendType, removeType, ButtonType.CLOSE);
 
         Button searchBtn = (Button) dialog.getDialogPane().lookupButton(searchType);
         Button sendBtn = (Button) dialog.getDialogPane().lookupButton(sendType);
+        Button removeBtn = (Button) dialog.getDialogPane().lookupButton(removeType);
 
         searchBtn.disableProperty().bind(searchField.textProperty().length().lessThan(2));
         sendBtn.disableProperty().bind(resultsList.getSelectionModel().selectedItemProperty().isNull());
+        removeBtn.disableProperty().bind(currentFriendsList.getSelectionModel().selectedItemProperty().isNull());
 
         searchBtn.addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
             e.consume();
@@ -1252,6 +1346,15 @@ public class ChatController implements Initializable {
             }
             String username = selected.split("\\s+")[0];
             sendFriendRequestToTarget(username, dialog);
+        });
+
+        removeBtn.addEventFilter(javafx.event.ActionEvent.ACTION, e -> {
+            e.consume();
+            String selectedFriend = currentFriendsList.getSelectionModel().getSelectedItem();
+            if (selectedFriend == null || selectedFriend.isBlank()) {
+                return;
+            }
+            removeFriendTarget(selectedFriend, currentFriendsList, removeHint);
         });
 
         dialog.showAndWait();
@@ -1395,6 +1498,44 @@ public class ChatController implements Initializable {
         });
     }
 
+    private void removeFriendTarget(String targetUsername, ListView<String> currentFriendsList, Label removeHint) {
+        String currentUser = UserSession.getInstance().getUsername();
+        CompletableFuture.runAsync(() -> {
+            try {
+                apiService.removeFriend(currentUser, targetUsername);
+                Platform.runLater(() -> {
+                    currentFriendsList.getItems().remove(targetUsername);
+
+                    friendUsernames.remove(targetUsername);
+                    friendUnread.remove(targetUsername);
+                    friendLastActivity.remove(targetUsername);
+                    friendLastPreview.remove(targetUsername);
+                    friendTypingUntil.remove(targetUsername);
+
+                    if (targetUsername.equals(privateTarget)) {
+                        privateTarget = null;
+                        userListView.getSelectionModel().clearSelection();
+                        clearTypingIndicator();
+                        updateChatHeader();
+                        loadPublicHistory();
+                        updateCallControls();
+                        updateRoomControls();
+                    }
+
+                    renderFriendList();
+                    if (currentFriendsList.getItems().isEmpty()) {
+                        removeHint.setText("No friends to remove yet.");
+                    }
+
+                    showInfo("Removed @" + targetUsername + " from friends");
+                    loadFriends();
+                });
+            } catch (IOException e) {
+                Platform.runLater(() -> showError("Failed to remove friend: " + e.getMessage()));
+            }
+        });
+    }
+
     private void trackMessageActivity(Message msg) {
         if (msg == null || msg.getType() == null) {
             return;
@@ -1408,6 +1549,8 @@ public class ChatController implements Initializable {
             if (other == null || other.isBlank()) {
                 return;
             }
+
+            ensureFriendTracked(other);
 
             friendLastActivity.put(other, activityTime);
             friendLastPreview.put(other, toPreviewText(msg.getContent()));
@@ -1514,12 +1657,29 @@ public class ChatController implements Initializable {
                     if (list.getItems().isEmpty()) {
                         hint.setText("No pending friend requests.");
                     }
+
+                    if (accept) {
+                        ensureFriendTracked(requester);
+                        renderFriendList();
+                    }
+
                     loadFriends();
                 });
             } catch (IOException e) {
                 Platform.runLater(() -> showError("Failed to update request: " + e.getMessage()));
             }
         });
+    }
+
+    private void ensureFriendTracked(String username) {
+        if (username == null || username.isBlank()) {
+            return;
+        }
+        if (!friendUsernames.contains(username)) {
+            friendUsernames.add(username);
+        }
+        friendUnread.putIfAbsent(username, 0);
+        friendLastActivity.putIfAbsent(username, LocalDateTime.MIN);
     }
 
     @FXML

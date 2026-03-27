@@ -11,27 +11,40 @@
       styleClass="chat-root">
 
   <!-- Sidebar -->
-  <VBox styleClass="sidebar" prefWidth="230" minWidth="190">
+  <VBox styleClass="sidebar" prefWidth="280" minWidth="220">
 
-    <!-- Header -->
-    <HBox styleClass="sidebar-header" alignment="CENTER_LEFT" spacing="8">
+    <!-- Header Line 1: Brand -->
+    <VBox styleClass="sidebar-header" alignment="CENTER" spacing="12">
+      <padding><Insets top="16" right="10" bottom="0" left="10"/></padding>
       <Label text="ChitChat" styleClass="brand-small"/>
-      <Region HBox.hgrow="ALWAYS"/>
-      <Button text="⚙" onAction="#handlePreferences" styleClass="btn-logout" tooltip="Preferences"/>
-      <Button text="⛔" onAction="#handleBlockedUsers" styleClass="btn-logout" tooltip="Blocked Users"/>
-      <Button text="&#x1F464;" onAction="#handleProfile" styleClass="btn-logout" tooltip="Profile"/>
-      <Button text="&#x2715;" onAction="#handleLogout" styleClass="btn-logout" tooltip="Logout"/>
+    </VBox>
+
+    <!-- Header Line 2: Action Buttons -->
+    <HBox alignment="CENTER" spacing="8">
+      <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+      <Button text="⚙" onAction="#handlePreferences" styleClass="btn-header-icon">
+        <tooltip><Tooltip text="Preferences"/></tooltip>
+      </Button>
+      <Button text="⛔" onAction="#handleBlockedUsers" styleClass="btn-header-icon">
+        <tooltip><Tooltip text="Blocked Users"/></tooltip>
+      </Button>
+      <Button text="👤" onAction="#handleProfile" styleClass="btn-header-icon">
+        <tooltip><Tooltip text="Profile"/></tooltip>
+      </Button>
+      <Button text="✕" onAction="#handleLogout" styleClass="btn-header-icon">
+        <tooltip><Tooltip text="Logout"/></tooltip>
+      </Button>
     </HBox>
 
     <!-- Logged-in user info -->
     <Label fx:id="userInfoLabel" styleClass="user-info-label" wrapText="true"/>
 
-    <!-- Friends section header -->
+    <!-- Header Line 3: Friends section header -->
     <HBox alignment="CENTER_LEFT" spacing="6">
       <padding><Insets top="10" right="10" bottom="4" left="10"/></padding>
       <Label text="FRIENDS" styleClass="section-title" HBox.hgrow="ALWAYS"/>
       <Button text="Req" styleClass="btn-add-friend" onAction="#handleFriendRequests"/>
-      <Button text="+ Add" styleClass="btn-add-friend" onAction="#handleAddFriend"/>
+      <Button text="Edit" styleClass="btn-add-friend" onAction="#handleAddFriend"/>
     </HBox>
 
     <!-- Friends list -->

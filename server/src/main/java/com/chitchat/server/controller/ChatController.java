@@ -1,9 +1,9 @@
 package com.chitchat.server.controller;
 
-import com.chitchat.server.service.ChatMessageService;
-import com.chitchat.server.service.UserService;
-import com.chitchat.shared.Message;
-import com.chitchat.shared.MessageType;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -12,9 +12,10 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import com.chitchat.server.service.ChatMessageService;
+import com.chitchat.server.service.UserService;
+import com.chitchat.shared.Message;
+import com.chitchat.shared.MessageType;
 
 @Controller
 public class ChatController {
@@ -82,6 +83,9 @@ public class ChatController {
         chatMessageService.save(message);
         messagingTemplate.convertAndSendToUser(receiver, "/queue/private", (Object) message);
         messagingTemplate.convertAndSendToUser(sender, "/queue/private", (Object) message);
+        // Compatibility path for clients using topic-per-user subscriptions.
+        messagingTemplate.convertAndSend("/topic/user." + receiver, (Object) message);
+        messagingTemplate.convertAndSend("/topic/user." + sender, (Object) message);
     }
 
     @MessageMapping("/chat.sendRoom")
@@ -105,6 +109,7 @@ public class ChatController {
 
         Message receipt = new Message(MessageType.READ_RECEIPT, reader, originalSender, originalMsgId);
         messagingTemplate.convertAndSendToUser(originalSender, "/queue/receipts", (Object) receipt);
+        messagingTemplate.convertAndSend("/topic/user." + originalSender, (Object) receipt);
     }
 
     // ───── Voice / Video Call Signalling ─────────────────────────────────────
@@ -144,6 +149,7 @@ public class ChatController {
         String receiver = message.getReceiver();
         if (receiver == null) return;
         messagingTemplate.convertAndSendToUser(receiver, "/queue/private", (Object) message);
+        messagingTemplate.convertAndSend("/topic/user." + receiver, (Object) message);
     }
 
     // ───── Disconnect ────────────────────────────────────────────────────────
