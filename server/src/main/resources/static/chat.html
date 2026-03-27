@@ -446,9 +446,8 @@ function connect(){
   stompClient.connect({login:currentUser.username},function(){
     reconnectDelay=2000;
     setConnectionStatus(true);
-    stompClient.subscribe('/user/queue/private',function(m){handleMessage(JSON.parse(m.body));});
     stompClient.subscribe('/topic/user.'+currentUser.username,function(m){handleMessage(JSON.parse(m.body));});
-    stompClient.subscribe('/user/queue/receipts',function(m){handleReceipt(JSON.parse(m.body));});
+    stompClient.subscribe('/topic/receipts.'+currentUser.username,function(m){handleReceipt(JSON.parse(m.body));});
     stompClient.subscribe('/topic/users',function(m){updateOnlineUsers(JSON.parse(m.body).content);});
     stompClient.subscribe('/user/queue/call',function(m){handleCallSignal(JSON.parse(m.body));});
     stompClient.send('/app/chat.join',{},JSON.stringify({type:'LOGIN',sender:currentUser.username,receiver:null,content:''}));

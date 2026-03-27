@@ -98,8 +98,8 @@ public class MessageHistoryController {
         wsMsg.setId(updated.getId());
         wsMsg.setEdited(true);
         if (updated.getReceiver() != null) {
-            messagingTemplate.convertAndSendToUser(updated.getReceiver(), "/queue/private", (Object) wsMsg);
-            messagingTemplate.convertAndSendToUser(updated.getSender(), "/queue/private", (Object) wsMsg);
+            messagingTemplate.convertAndSend("/topic/user." + updated.getReceiver(), (Object) wsMsg);
+            messagingTemplate.convertAndSend("/topic/user." + updated.getSender(), (Object) wsMsg);
         } else if (updated.getRoomId() != null) {
             messagingTemplate.convertAndSend("/topic/room/" + updated.getRoomId(), (Object) wsMsg);
         } else {
@@ -124,8 +124,8 @@ public class MessageHistoryController {
         wsMsg.setId(updated.getId());
         wsMsg.setDeleted(true);
         if (updated.getReceiver() != null) {
-            messagingTemplate.convertAndSendToUser(updated.getReceiver(), "/queue/private", (Object) wsMsg);
-            messagingTemplate.convertAndSendToUser(updated.getSender(), "/queue/private", (Object) wsMsg);
+            messagingTemplate.convertAndSend("/topic/user." + updated.getReceiver(), (Object) wsMsg);
+            messagingTemplate.convertAndSend("/topic/user." + updated.getSender(), (Object) wsMsg);
         } else if (updated.getRoomId() != null) {
             messagingTemplate.convertAndSend("/topic/room/" + updated.getRoomId(), (Object) wsMsg);
         } else {

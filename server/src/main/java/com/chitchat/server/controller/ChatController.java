@@ -80,8 +80,8 @@ public class ChatController {
         message.setId(UUID.randomUUID().toString());
         messageSenders.put(message.getId(), sender);
         chatMessageService.save(message);
-        messagingTemplate.convertAndSendToUser(receiver, "/queue/private", (Object) message);
-        messagingTemplate.convertAndSendToUser(sender, "/queue/private", (Object) message);
+        messagingTemplate.convertAndSend("/topic/user." + receiver, (Object) message);
+        messagingTemplate.convertAndSend("/topic/user." + sender, (Object) message);
     }
 
     @MessageMapping("/chat.sendRoom")
@@ -104,7 +104,7 @@ public class ChatController {
         if (originalSender == null || originalSender.equals(reader)) return;
 
         Message receipt = new Message(MessageType.READ_RECEIPT, reader, originalSender, originalMsgId);
-        messagingTemplate.convertAndSendToUser(originalSender, "/queue/receipts", (Object) receipt);
+        messagingTemplate.convertAndSend("/topic/receipts." + originalSender, (Object) receipt);
     }
 
     // ───── Voice / Video Call Signalling ─────────────────────────────────────
@@ -113,28 +113,28 @@ public class ChatController {
     public void callOffer(@Payload Message message) {
         String target = message.getReceiver();
         if (target == null) return;
-        messagingTemplate.convertAndSendToUser(target, "/queue/call", (Object) message);
+        messagingTemplate.convertAndSend("/topic/user." + target, (Object) message);
     }
 
     @MessageMapping("/call.answer")
     public void callAnswer(@Payload Message message) {
         String target = message.getReceiver();
         if (target == null) return;
-        messagingTemplate.convertAndSendToUser(target, "/queue/call", (Object) message);
+        messagingTemplate.convertAndSend("/topic/user." + target, (Object) message);
     }
 
     @MessageMapping("/call.ice")
     public void callIce(@Payload Message message) {
         String target = message.getReceiver();
         if (target == null) return;
-        messagingTemplate.convertAndSendToUser(target, "/queue/call", (Object) message);
+        messagingTemplate.convertAndSend("/topic/user." + target, (Object) message);
     }
 
     @MessageMapping("/call.end")
     public void callEnd(@Payload Message message) {
         String target = message.getReceiver();
         if (target == null) return;
-        messagingTemplate.convertAndSendToUser(target, "/queue/call", (Object) message);
+        messagingTemplate.convertAndSend("/topic/user." + target, (Object) message);
     }
 
     // ───── Typing Indicator ──────────────────────────────────────────────────
@@ -143,7 +143,7 @@ public class ChatController {
     public void typingIndicator(@Payload Message message) {
         String receiver = message.getReceiver();
         if (receiver == null) return;
-        messagingTemplate.convertAndSendToUser(receiver, "/queue/private", (Object) message);
+        messagingTemplate.convertAndSend("/topic/user." + receiver, (Object) message);
     }
 
     // ───── Disconnect ────────────────────────────────────────────────────────
