@@ -695,10 +695,11 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 
 /* ===== Message bar — new buttons ===== */
 .btn-gif {
-  background: none; border: 1px solid var(--border); border-radius: 6px;
-  color: var(--primary); font-size: .65rem; font-weight: 800; padding: 2px 5px;
+  background: none; border: 1px solid var(--border); border-radius: 50%;
+  color: var(--primary); font-size: .6rem; font-weight: 800;
+  width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0; letter-spacing: .5px;
-  transition: background .15s;
+  transition: background .15s; padding: 0;
 }
 .btn-gif:hover { background: var(--bg); }
 .btn-loc {
