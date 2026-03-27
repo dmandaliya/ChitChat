@@ -53,13 +53,14 @@ public class AuthController {
     }
 
     private Map<String, Object> toDto(UserEntity user) {
-        return Map.of(
-                "id", user.getId(),
-                "fname", user.getFname(),
-                "lname", user.getLname(),
-                "username", user.getUsername(),
-                "lastOnline", user.getLastOnline() != null ? user.getLastOnline() : "",
-                "token", jwtUtil.generateToken(user.getUsername())
-        );
+        var map = new java.util.LinkedHashMap<String, Object>();
+        map.put("id", user.getId());
+        map.put("fname", user.getFname());
+        map.put("lname", user.getLname());
+        map.put("username", user.getUsername());
+        map.put("lastOnline", user.getLastOnline() != null ? user.getLastOnline() : "");
+        map.put("avatarUrl", user.getAvatarUrl() != null ? user.getAvatarUrl() : "");
+        map.put("token", jwtUtil.generateToken(user.getUsername()));
+        return map;
     }
 }

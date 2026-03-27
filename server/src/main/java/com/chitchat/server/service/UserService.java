@@ -86,4 +86,8 @@ public class UserService {
     public List<UserEntity> searchUsers(String q) {
         return userRepository.searchByUsernameOrName(q);
     }
+
+    public UserEntity save(UserEntity user) {
+        return userRepository.save(user);
+    }
 }

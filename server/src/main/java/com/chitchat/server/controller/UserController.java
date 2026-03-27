@@ -7,6 +7,7 @@ import com.chitchat.shared.UserPreferences;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,14 +24,23 @@ public class UserController {
         this.userService = userService;
     }
 
+    // ── Helper ─────────────────────────────────────────────────────────────────
+
+    private Map<String, String> userDto(UserEntity u) {
+        var m = new LinkedHashMap<String, String>();
+        m.put("username", u.getUsername());
+        m.put("fname", u.getFname());
+        m.put("lname", u.getLname());
+        m.put("avatarUrl", u.getAvatarUrl() != null ? u.getAvatarUrl() : "");
+        return m;
+    }
+
     // ── Friends ────────────────────────────────────────────────────────────────
 
     @GetMapping("/{username}/friends")
     public ResponseEntity<?> getFriends(@PathVariable String username) {
-        List<UserEntity> friends = friendService.getFriends(username);
-        List<Map<String, String>> result = friends.stream()
-                .map(f -> Map.of("username", f.getUsername(), "fname", f.getFname(), "lname", f.getLname()))
-                .toList();
+        List<Map<String, String>> result = friendService.getFriends(username).stream()
+                .map(this::userDto).toList();
         return ResponseEntity.ok(result);
     }
 
@@ -48,10 +58,8 @@ public class UserController {
 
     @GetMapping("/{username}/friend-requests")
     public ResponseEntity<?> getPendingRequests(@PathVariable String username) {
-        List<UserEntity> pending = friendService.getPendingRequests(username);
-        List<Map<String, String>> result = pending.stream()
-                .map(u -> Map.of("username", u.getUsername(), "fname", u.getFname(), "lname", u.getLname()))
-                .toList();
+        List<Map<String, String>> result = friendService.getPendingRequests(username).stream()
+                .map(this::userDto).toList();
         return ResponseEntity.ok(result);
     }
 
@@ -89,10 +97,8 @@ public class UserController {
 
     @GetMapping("/{username}/blocked")
     public ResponseEntity<?> getBlockedUsers(@PathVariable String username) {
-        List<UserEntity> blocked = userService.getBlockedUsers(username);
-        List<Map<String, String>> result = blocked.stream()
-                .map(u -> Map.of("username", u.getUsername(), "fname", u.getFname(), "lname", u.getLname()))
-                .toList();
+        List<Map<String, String>> result = userService.getBlockedUsers(username).stream()
+                .map(this::userDto).toList();
         return ResponseEntity.ok(result);
     }
 
@@ -116,13 +122,22 @@ public class UserController {
         }
     }
 
+    // ── Avatar ─────────────────────────────────────────────────────────────────
+
+    @PutMapping("/{username}/avatar")
+    public ResponseEntity<?> updateAvatar(@PathVariable String username, @RequestBody Map<String, String> body) {
+        UserEntity user = userService.findByUsername(username);
+        user.setAvatarUrl(body.get("avatarUrl"));
+        userService.save(user);
+        return ResponseEntity.ok(Map.of("message", "Avatar updated"));
+    }
+
     // ── Search ─────────────────────────────────────────────────────────────────
 
     @GetMapping("/search")
     public ResponseEntity<?> searchUsers(@RequestParam String q) {
         List<Map<String, String>> result = userService.searchUsers(q).stream()
-                .map(u -> Map.of("username", u.getUsername(), "fname", u.getFname(), "lname", u.getLname()))
-                .toList();
+                .map(this::userDto).toList();
         return ResponseEntity.ok(result);
     }
 
@@ -131,12 +146,13 @@ public class UserController {
     @GetMapping("/{username}/profile")
     public ResponseEntity<?> getProfile(@PathVariable String username) {
         UserEntity user = userService.findByUsername(username);
-        return ResponseEntity.ok(Map.of(
-                "username", user.getUsername(),
-                "fname", user.getFname(),
-                "lname", user.getLname(),
-                "lastSeen", user.getLastOnline() != null ? user.getLastOnline() : ""
-        ));
+        var m = new LinkedHashMap<String, String>();
+        m.put("username", user.getUsername());
+        m.put("fname", user.getFname());
+        m.put("lname", user.getLname());
+        m.put("lastSeen", user.getLastOnline() != null ? user.getLastOnline() : "");
+        m.put("avatarUrl", user.getAvatarUrl() != null ? user.getAvatarUrl() : "");
+        return ResponseEntity.ok(m);
     }
 
     // ── Preferences ────────────────────────────────────────────────────────────

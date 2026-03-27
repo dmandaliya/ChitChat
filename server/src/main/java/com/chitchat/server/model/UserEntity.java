@@ -30,6 +30,9 @@ public class UserEntity {
 
     private boolean loggedIn = false;
 
+    @Column(columnDefinition = "TEXT")
+    private String avatarUrl;
+
     @Convert(converter = UserPreferencesConverter.class)
     @Column(columnDefinition = "TEXT")
     private UserPreferences preferences = new UserPreferences();
@@ -86,6 +89,9 @@ public class UserEntity {
 
     public boolean isLoggedIn() { return loggedIn; }
     public void setLoggedIn(boolean loggedIn) { this.loggedIn = loggedIn; }
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 
     public UserPreferences getPreferences() { return preferences; }
     public void setPreferences(UserPreferences preferences) { this.preferences = preferences; }

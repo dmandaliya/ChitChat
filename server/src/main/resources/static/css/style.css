@@ -692,3 +692,44 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 }
 .bg-preset:hover { transform: scale(1.06); }
 .bg-preset.selected { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+
+/* ===== Message bar — new buttons ===== */
+.btn-gif {
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  color: var(--primary); font-size: .65rem; font-weight: 800; padding: 2px 5px;
+  cursor: pointer; flex-shrink: 0; letter-spacing: .5px;
+  transition: background .15s;
+}
+.btn-gif:hover { background: var(--bg); }
+.btn-loc {
+  background: none; border: none; font-size: 1.1rem; cursor: pointer;
+  flex-shrink: 0; padding: 0 2px; opacity: .75; transition: opacity .15s;
+}
+.btn-loc:hover { opacity: 1; }
+.btn-mic {
+  background: none; border: none; font-size: 1.15rem; cursor: pointer;
+  flex-shrink: 0; padding: 0 3px; opacity: .75; transition: opacity .15s, transform .1s;
+  user-select: none; -webkit-user-select: none;
+}
+.btn-mic:hover { opacity: 1; }
+.btn-mic.recording { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 4px #ef4444); }
+
+/* ===== GIF grid ===== */
+.gif-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  max-height: 300px; overflow-y: auto; margin-top: 8px;
+}
+.gif-thumb {
+  width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px;
+  cursor: pointer; transition: transform .12s, opacity .12s;
+}
+.gif-thumb:hover { transform: scale(1.04); opacity: .9; }
+
+/* ===== Message types — audio / location ===== */
+.msg-location {
+  display: inline-flex; align-items: center; gap: 4px; font-size: .88rem;
+  color: var(--primary); text-decoration: none; padding: 4px 8px;
+  border: 1px solid var(--primary); border-radius: 12px;
+}
+.msg-location:hover { background: var(--bg); }
+.msg-gif { max-width: 200px; border-radius: 10px; }

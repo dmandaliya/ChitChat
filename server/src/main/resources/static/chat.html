@@ -174,7 +174,10 @@
     <form class="message-bar" onsubmit="sendMessage(event)">
       <button type="button" class="btn-attach" onclick="document.getElementById('img-input').click()" title="Send image">📎</button>
       <button type="button" class="btn-emoji" onclick="toggleEmojiPicker(event)" title="Emoji">😊</button>
+      <button type="button" class="btn-gif" onclick="openGifPicker()" title="Send GIF">GIF</button>
+      <button type="button" class="btn-loc" onclick="sendLocation()" title="Share location">📍</button>
       <input type="text" id="msg-input" placeholder="Type a message&hellip;" autocomplete="off" oninput="onTyping()"/>
+      <button type="button" id="btn-mic" class="btn-mic" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()" title="Hold to record voice">🎤</button>
       <button type="submit" class="btn-send" title="Send">&#10148;</button>
     </form>
   </main>
@@ -207,12 +210,25 @@
   </div>
 </div>
 
+<!-- GIF PICKER MODAL -->
+<div id="gif-modal" class="modal hidden">
+  <div class="modal-card" style="max-width:480px">
+    <h3>Send a GIF</h3>
+    <input type="text" id="gif-search" placeholder="Search GIFs…" oninput="searchGifs(this.value)" autocomplete="off"/>
+    <div id="gif-results" class="gif-grid"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="document.getElementById('gif-modal').classList.add('hidden')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 <script>
 // ─── State ────────────────────────────────────────────────────────────────
 var stompClient=null,currentUser=null,chatMode='',peerConn=null,localStream=null,callTarget=null,incomingOffer=null;
 var pendingQueue=[];
+var nameMap={}; // username -> {fname, lname}
 var jwtToken=sessionStorage.getItem('jwt')||'';
 function authHeaders(){return jwtToken?{'Content-Type':'application/json','Authorization':'Bearer '+jwtToken}:{'Content-Type':'application/json'};}
 function apiFetch(url,opts){opts=opts||{};opts.headers=Object.assign(authHeaders(),opts.headers||{});return fetch(url,opts);}
@@ -225,6 +241,12 @@ var lastMessages={};
 var typingTimers={};
 var currentReactMsgId=null;
 var screenStream=null;
+
+// ─── Display name helper ──────────────────────────────────────────────────
+function displayName(username){
+  var n=nameMap[username];
+  return (n&&n.fname)?n.fname+' '+n.lname:username;
+}
 
 // ─── Avatar (defined early — used before connect) ─────────────────────────
 var AVATAR_COLORS=['#4c6fff','#ff6b9d','#f59e0b','#10b981','#8b5cf6','#ef4444','#06b6d4','#84cc16'];
@@ -257,6 +279,7 @@ function renderRailAvatar(){
 function uploadOwnPic(input){
   var file=input.files[0];
   if(!file)return;
+  if(file.size>1*1024*1024){alert('Photo must be under 1 MB');input.value='';return;}
   var reader=new FileReader();
   reader.onload=function(e){
     var b64=e.target.result;
@@ -264,6 +287,11 @@ function uploadOwnPic(input){
     renderRailAvatar();
     renderSettingsOwnAvatar();
     renderFriendList();
+    // Persist to server so other users see your avatar
+    apiFetch('/api/users/'+encodeURIComponent(currentUser.username)+'/avatar',{
+      method:'PUT',
+      body:JSON.stringify({avatarUrl:b64})
+    });
   };
   reader.readAsDataURL(file);
   input.value='';
@@ -358,6 +386,8 @@ function setRailView(view){
 var ud=sessionStorage.getItem('user');
 if(!ud){window.location.href='index.html';}
 currentUser=JSON.parse(ud);
+nameMap[currentUser.username]={fname:currentUser.fname||'',lname:currentUser.lname||''};
+if(currentUser.avatarUrl) localStorage.setItem('pic_'+currentUser.username,currentUser.avatarUrl);
 document.getElementById('user-info').innerHTML=
   '<div style="display:flex;align-items:center;gap:8px">'+
   avatarHtml(currentUser.username,'34px')+
@@ -475,6 +505,11 @@ async function loadFriends(){
   var res=await fetch('/api/users/'+currentUser.username+'/friends');
   var friends=await res.json();
   myFriends=friends.map(function(f){return f.username;});
+  // Cache name and avatar for each friend
+  friends.forEach(function(f){
+    nameMap[f.username]={fname:f.fname||'',lname:f.lname||''};
+    if(f.avatarUrl) localStorage.setItem('pic_'+f.username,f.avatarUrl);
+  });
   renderFriendList();
 }
 
@@ -509,7 +544,7 @@ function renderFriendList(){
       '</div>'+
       '<div class="friend-info">'+
         '<div class="friend-name-row">'+
-          '<span class="user-name">'+esc(username)+'</span>'+
+          '<span class="user-name">'+esc(displayName(username))+'</span>'+
           (unread>0?'<span class="badge">'+unread+'</span>':'')+
         '</div>'+
         '<div class="friend-preview">'+(isTyping?'<em style="color:#22c55e;font-style:italic">typing\u2026</em>':esc(lastMsg))+'</div>'+
@@ -549,7 +584,8 @@ function searchUsers(q){
       filtered.forEach(function(u){
         var div=document.createElement('div');
         div.className='search-result-item';
-        div.innerHTML=avatarHtml(u.username,'28px')+'<span>'+esc(u.username)+'</span>';
+        var uName=(u.fname&&u.lname)?esc(u.fname)+' '+esc(u.lname):esc(u.username);
+        div.innerHTML=avatarHtml(u.username,'28px')+'<div style="display:flex;flex-direction:column;line-height:1.2"><span style="font-size:.85rem;font-weight:600">'+uName+'</span><span style="font-size:.72rem;color:var(--text-muted)">@'+esc(u.username)+'</span></div>';
         div.onclick=function(){document.getElementById('add-friend-input').value=u.username;results.innerHTML='';};
         results.appendChild(div);
       });
@@ -581,7 +617,7 @@ async function loadFriendRequests(){
       requests.map(function(u){
         return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">'+
           avatarHtml(u.username,'28px')+
-          '<span style="flex:1;font-size:.82rem;font-weight:500">'+esc(u.username)+'</span>'+
+          '<div style="flex:1;display:flex;flex-direction:column;line-height:1.2"><span style="font-size:.82rem;font-weight:600">'+esc((u.fname&&u.lname)?u.fname+' '+u.lname:u.username)+'</span><span style="font-size:.7rem;color:var(--text-muted)">@'+esc(u.username)+'</span></div>'+
           '<button onclick="acceptRequest(\''+esc(u.username)+'\')" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:2px 8px;font-size:.75rem;cursor:pointer">✓</button>'+
           '<button onclick="rejectRequest(\''+esc(u.username)+'\')" style="background:var(--gray);color:var(--ink);border:none;border-radius:6px;padding:2px 8px;font-size:.75rem;cursor:pointer;margin-left:2px">✕</button>'+
         '</div>';
@@ -774,6 +810,113 @@ function sendImage(input){
   input.value='';
 }
 
+// ─── Voice recording ──────────────────────────────────────────────────────
+var mediaRecorder=null, audioChunks=[];
+function startRecording(){
+  if(chatMode===''||!stompClient)return;
+  if(!navigator.mediaDevices){alert('Microphone not supported in this browser.');return;}
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    audioChunks=[];
+    mediaRecorder=new MediaRecorder(stream);
+    mediaRecorder.ondataavailable=function(e){if(e.data.size>0)audioChunks.push(e.data);};
+    mediaRecorder.onstop=function(){
+      var blob=new Blob(audioChunks,{type:'audio/webm'});
+      stream.getTracks().forEach(function(t){t.stop();});
+      var reader=new FileReader();
+      reader.onload=function(e){
+        var b64=e.target.result;
+        if(chatMode.startsWith('private:')){
+          var target=chatMode.split(':')[1];
+          var msg={type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:b64,timestamp:new Date().toISOString(),pending:true};
+          displayMessage(msg);
+          stompClient.send('/app/chat.sendPrivate',{},JSON.stringify(msg));
+          updateLastMsg(chatMode,'🎤 Voice');
+        }else if(chatMode.startsWith('room:')){
+          var parts=chatMode.split(':');
+          stompClient.send('/app/chat.sendRoom',{},JSON.stringify({type:'ROOM_MESSAGE',sender:currentUser.username,receiver:null,roomId:parts[1],content:b64}));
+        }
+      };
+      reader.readAsDataURL(blob);
+    };
+    mediaRecorder.start();
+    document.getElementById('btn-mic').classList.add('recording');
+  }).catch(function(){alert('Could not access microphone.');});
+}
+function stopRecording(){
+  if(mediaRecorder&&mediaRecorder.state==='recording'){
+    mediaRecorder.stop();
+    document.getElementById('btn-mic').classList.remove('recording');
+  }
+}
+
+// ─── GIF picker ───────────────────────────────────────────────────────────
+var GIPHY_KEY='dc6zaTOxFJmzC';
+var gifTimeout=null;
+function openGifPicker(){
+  if(chatMode==='')return;
+  document.getElementById('gif-modal').classList.remove('hidden');
+  document.getElementById('gif-search').value='';
+  document.getElementById('gif-results').innerHTML='';
+  searchGifs('hello');
+  setTimeout(function(){document.getElementById('gif-search').focus();},100);
+}
+function searchGifs(q){
+  clearTimeout(gifTimeout);
+  if(!q){document.getElementById('gif-results').innerHTML='';return;}
+  gifTimeout=setTimeout(async function(){
+    try{
+      var url='https://api.giphy.com/v1/gifs/search?api_key='+GIPHY_KEY+'&q='+encodeURIComponent(q)+'&limit=16&rating=g';
+      var res=await fetch(url);
+      var data=await res.json();
+      var grid=document.getElementById('gif-results');
+      grid.innerHTML='';
+      (data.data||[]).forEach(function(gif){
+        var img=document.createElement('img');
+        img.src=gif.images.fixed_height_small.url;
+        img.className='gif-thumb';
+        img.onclick=function(){sendGif(gif.images.original.url);};
+        grid.appendChild(img);
+      });
+    }catch(ex){}
+  },400);
+}
+function sendGif(url){
+  document.getElementById('gif-modal').classList.add('hidden');
+  if(!stompClient||chatMode==='')return;
+  var content='__gif__'+url;
+  if(chatMode.startsWith('private:')){
+    var target=chatMode.split(':')[1];
+    var msg={type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:content,timestamp:new Date().toISOString(),pending:true};
+    displayMessage(msg);
+    stompClient.send('/app/chat.sendPrivate',{},JSON.stringify(msg));
+    updateLastMsg(chatMode,'🎞️ GIF');
+  }else if(chatMode.startsWith('room:')){
+    var parts=chatMode.split(':');
+    stompClient.send('/app/chat.sendRoom',{},JSON.stringify({type:'ROOM_MESSAGE',sender:currentUser.username,receiver:null,roomId:parts[1],content:content}));
+  }
+}
+
+// ─── Location sharing ─────────────────────────────────────────────────────
+function sendLocation(){
+  if(chatMode===''||!stompClient)return;
+  if(!navigator.geolocation){alert('Geolocation not supported.');return;}
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var lat=pos.coords.latitude.toFixed(5);
+    var lng=pos.coords.longitude.toFixed(5);
+    var content='__loc__'+lat+','+lng;
+    if(chatMode.startsWith('private:')){
+      var target=chatMode.split(':')[1];
+      var msg={type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:content,timestamp:new Date().toISOString(),pending:true};
+      displayMessage(msg);
+      stompClient.send('/app/chat.sendPrivate',{},JSON.stringify(msg));
+      updateLastMsg(chatMode,'📍 Location');
+    }else if(chatMode.startsWith('room:')){
+      var parts=chatMode.split(':');
+      stompClient.send('/app/chat.sendRoom',{},JSON.stringify({type:'ROOM_MESSAGE',sender:currentUser.username,receiver:null,roomId:parts[1],content:content}));
+    }
+  },function(){alert('Could not get your location.');});
+}
+
 // ─── Draft messages ────────────────────────────────────────────────────────
 function saveDraft(){
   var val=document.getElementById('msg-input').value;
@@ -825,8 +968,8 @@ function formatTime(ts){
     var diff=Math.floor((Date.now()-d)/1000);
     if(diff<60) return 'just now';
     if(diff<3600) return Math.floor(diff/60)+' min ago';
-    var now=new Date();
-    if(d.toDateString()===now.toDateString()) return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    if(diff<86400) return Math.floor(diff/3600)+' hr ago';
+    if(diff<172800) return 'Yesterday '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     return d.toLocaleDateString([],{month:'short',day:'numeric'})+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   }catch(ex){return'';}
 }
@@ -840,6 +983,9 @@ function displayMessage(msg){
   var isSystem=msg.sender==='System';
   var isPrivate=msg.type==='PRIVATE_MESSAGE';
   var isImage=msg.content&&msg.content.startsWith('data:image/');
+  var isAudio=msg.content&&msg.content.startsWith('data:audio');
+  var isGif=msg.content&&msg.content.startsWith('__gif__');
+  var isLoc=msg.content&&msg.content.startsWith('__loc__');
   var wrap=document.createElement('div');
   wrap.classList.add('msg-wrap',isMine?'mine':'theirs','msg-fade-in');
   if(msg.id)wrap.dataset.msgId=msg.id;
@@ -851,6 +997,12 @@ function displayMessage(msg){
     var quoteHtml=msg.replyTo?'<div class="msg-quote">'+esc(msg.replyTo)+'</div>':'';
     var contentHtml=isImage
       ?'<img src="'+msg.content+'" class="msg-image" onclick="viewImage(this.src)"/>'
+      :isAudio
+      ?'<audio controls src="'+msg.content+'" style="max-width:220px;height:36px"></audio>'
+      :isGif
+      ?'<img src="'+esc(msg.content.slice(7))+'" class="msg-image msg-gif" onclick="viewImage(this.src)"/>'
+      :isLoc
+      ?(function(){var p=msg.content.slice(7);return '<a href="https://www.google.com/maps?q='+encodeURIComponent(p)+'" target="_blank" class="msg-location">📍 View on Map</a>';})()
       :esc(msg.content);
     var time=formatTime(msg.timestamp||msg.sentAt||null);
     var bubbleHover=msg.id?' onmouseenter="showReactionPicker(event,\''+msg.id+'\')"':'';
@@ -944,7 +1096,7 @@ function setPrivateChat(username){
     clearTabBadge();
     var isOnline=onlineSet.has(username);
     document.getElementById('chat-header-avatar').innerHTML=avatarHtml(username,'36px');
-    document.getElementById('chat-header-name').textContent=username;
+    document.getElementById('chat-header-name').textContent=displayName(username);
     document.getElementById('chat-header-status').innerHTML=isOnline?'<span style="color:#22c55e">\u25cf Online</span>':'<span style="color:var(--text-muted)">Offline</span>';
     document.getElementById('chat-header-actions').innerHTML=
       '<button class="btn-call-icon" title="Search messages" onclick="openSearch()">🔍</button>'+
