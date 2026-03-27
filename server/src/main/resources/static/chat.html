@@ -650,6 +650,22 @@ function sendMessage(e){
 function handleMessage(msg){
   if(msg.type==='USER_LIST'){updateOnlineUsers(msg.content);return;}
   if(msg.type==='TYPING'){showTypingIndicator(msg.sender);return;}
+  if(msg.type==='MESSAGE_EDITED'&&msg.id){
+    var el=document.getElementById('msg-'+msg.id);
+    if(el){
+      var b=el.querySelector('.msg-bubble');
+      if(b){
+        b.childNodes[0].textContent=msg.content||'';
+        if(!el.querySelector('.msg-edited')){var s=document.createElement('span');s.className='msg-edited';s.textContent=' (edited)';b.appendChild(s);}
+      }
+    }
+    return;
+  }
+  if(msg.type==='MESSAGE_DELETED'&&msg.id){
+    var el=document.getElementById('msg-'+msg.id);
+    if(el){var b=el.querySelector('.msg-bubble');if(b){b.innerHTML='<em style="opacity:.5">Message deleted</em>';b.style.background='var(--bg)';b.style.color='var(--text-muted)';}}
+    return;
+  }
   var convKey='';
   if(msg.type==='PRIVATE_MESSAGE'){
     convKey=msg.sender===currentUser.username?'private:'+msg.receiver:'private:'+msg.sender;
