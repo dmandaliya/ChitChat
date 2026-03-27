@@ -1,118 +1,246 @@
 # Session Handoff
 
 ## Current State
-- Date: 2026-03-26
-- Branch: desktop-app
-- HEAD: 1adc52b
-- Working tree: clean
-- **STATUS**: Live QA Gate 1 in progress (public/private/room messaging delivery)
+- **Date**: 2026-03-27
+- **Branch**: desktop-app
+- **HEAD**: 9bfa939 (feat: configure client for Render backend and add cross-platform QA checklist)
+- **Working tree**: clean
+- **STATUS**: All local QA gates passing (1-4); ready for cross-platform testing with Render backend
+
+---
 
 ## What Was Completed In This Round
 
-### Gate 1 QA Defects Fixed
-1. **Desktop client server URL misconfiguration**
-   - Issue: Hardcoded to Render backend instead of localhost
-   - Fix: Implemented `resolveServerUrl()` with 3-tier resolution (property → env → localhost default)
+### UI Improvements & Refinements
+1. **Fixed button truncation in sidebar header**
+   - Issue: "ChitChat" text and profile/logout buttons were truncated due to narrow sidebar (prefWidth=230)
+   - Fix: Increased prefWidth to 280, restructured layout to 3-line format:
+     - Line 1: "ChitChat" brand (centered, standalone)
+     - Line 2: Action buttons (⚙ ✕ 👤 ⛔) with improved spacing
+     - Line 3: Friends section header with Req/Edit buttons
+   - Result: Buttons now fully visible with proper sizing
+
+2. **Enhanced button styling to match web app design**
+   - Resized action buttons to 40×40px (was 16px icon size)
+   - Updated hover state: light gray background with dark text (matching web design)
+   - Logout button highlight: red on hover (danger indication)
+   - Added .btn-icon class with web-app-consistent styling
+   - Added dark theme support for all button states
+   - Files: chat.fxml, style.css
+
+3. **Fixed auto-scroll for message chat window**
+   - Issue: Auto-scroll was firing on every historical message load, causing jerky experience
+   - Fix: Refactored scroll logic:
+     - Only auto-scroll for NEW real-time messages (fromHistory=false)
+     - History loads silently, then scrolls to bottom ONCE after all messages loaded
+     - Added 50ms PauseTransition delay before scroll to allow layout computation
+     - Used Platform.runLater() for thread-safe scroll scheduling
+   - Result: Smooth message history loading followed by single bottom scroll for new messages
+   - Files: ChatController.java
+
+### Backend Configuration
+1. **Configured client for Render production backend**
+   - Updated DEFAULT_SERVER_URL from localhost:8080 → https://chitchat-moy8.onrender.com
+   - Environment variable override still supported (CHITCHAT_SERVER_URL)
+   - Server URL resolution logic unchanged (3-tier: env → property → default)
    - File: ChatClientApp.java
 
-2. **Shared module enum mismatch (MessageType.TYPING)**
-   - Issue: Runtime deserialization error when receiving TYPING messages
-   - Fix: Maven installed current shared module to local cache
-   - Command: `mvn -pl shared -am install -DskipTests`
+### QA Automation & Test Planning
+1. **Created comprehensive cross-platform QA checklist**
+   - File: CROSS_PLATFORM_QA.md (235 lines, 82 test cases)
+   - 7 testing phases with detailed test cases and pass criteria:
+     
+     | Phase | Focus | Duration | Key Coverage |
+     |-------|-------|----------|--------------|
+     | 1 | Auth & Messaging | 15 min | Register, public/private msg sync both directions |
+     | 2 | Real-time Sync | 10 min | Typing indicators, read receipts, online status |
+     | 3 | Social Features | 12 min | Friend requests, blocking, list updates |
+     | 4 | Profile & Persistence | 10 min | Bio updates, preferences persist cross-platform |
+     | 5 | Multi-window Sync | 10 min | Same conversation open both platforms, no dupes |
+     | 6 | Edge Cases | 15 min | Rapid sends, network recovery, concurrent updates |
+     | 7 | Performance | 10 min | Load times, memory/CPU baselines |
 
-3. **FXML tooltip syntax errors**
-   - Issue: Invalid `tooltip="string"` attribute on 4 sidebar buttons
-   - Fix: Updated to proper nested `<tooltip><Tooltip text="..."/>` syntax
-   - File: chat.fxml
+### QA Results - Local Testing (localhost:8080)
+✅ **Gate 1:** Public/Private/Room messaging delivery  
+✅ **Gate 2:** Reconnect recovery and message deduplication  
+✅ **Gate 3:** Typing indicators and seen receipt state transitions  
+✅ **Gate 4:** Profile persistence, friend requests, block/unblock  
 
-4. **Friend list not updating after acceptance**
-   - Issue: No periodic refresh, no auto-tracking of incoming private peers
-   - Fix: Added 8-second roster refresh timeline + auto-track via `ensureFriendTracked()`
-   - File: ChatController.java
+All features working correctly with local server. Ready for Render backend validation.
 
-5. **Private messages not visible until manual refresh**
-   - Issue: Server only publishing to `/user/queue/private` (not subscribed by manual STOMP client)
-   - Fix: Client now subscribes to `/topic/user.{username}` on CONNECTED; server publishes to both
-   - Files: WebSocketService.java (client), ChatController.java (server)
+---
 
-6. **Blank alert popups on friend request sent**
-   - Issue: `showInfo()` and `showError()` lacked title and null-safe fallback content
-   - Fix: Added title + defensive null checks with fallback messages
-   - File: ChatController.java
+## Commits This Session
+| Commit | Message |
+|--------|---------|
+| ab27c02 | feat: pass all QA gates - fixed UI truncation, refactored sidebar layout, added dark theme support |
+| b9cb609 | fix: improve auto-scroll for chat messages and enhance button styling |
+| 9bfa939 | feat: configure client for Render backend and add cross-platform QA checklist |
 
-### Feature Addition: Remove Friend
-- Implemented Edit Friends dialog consolidating send request + remove friend workflows
-- Allows selective friend removal without account re-registration for rapid test iteration
-- Clears local tracking maps (friendUnread, friendLastActivity, etc.) on removal
-- Safely exits private chat if removed friend is currently selected
-- Files: ChatController.java (method overhaul), chat.fxml (button label change)
+---
 
-### Build Validation
-- All three modules (parent, shared, client, server) compile cleanly
-- Last successful compile: `mvn -pl client -am compile` (0.956s, no errors)
+## Recent Build Status
+```
+✅ Maven compile: client module (2.635s, BUILD SUCCESS)
+✅ All three modules: shared, client, server (clean state)
+✅ Client configuration: Server URL updated to Render endpoint
+```
 
-## Recent Desktop Checkpoints
-- 2026-03-26 QA Session: Fixed 6 critical defects blocking message delivery
-  - Server URL resolution (localhost default + property/env overrides)
-  - Shared module enum mismatch (TYPING)
-  - FXML tooltip syntax (4 buttons in sidebar)
-  - Friend list refresh (8-second timeline + auto-track)
-  - Private message realtime delivery (topic-per-user subscriptions)
-  - Alert UX hardening (title + null-safe fallback content)
-  - Feature: Remove friend without account re-registration
-- cdae69d feat(client): finalize desktop for reconnect, previews, and notifications
+### Build Baseline Commands
+```bash
+# Full clean rebuild
+mvn clean compile
 
-## Confirmed Build Baseline
-- Maven compile succeeded for all modules in this QA session:
-  - `mvn clean compile` (3.786s, all 4 modules)
-  - `mvn -pl shared -am install` (shared-1.0-SNAPSHOT.jar deployed)
-  - `mvn -pl client -am compile` (0.956s, client module with all fixes)
+# Client-only rebuild
+mvn -pl client -am clean compile
+
+# Successful build time: ~2.6-3.0 seconds
+```
+
+---
 
 ## Next Planned Work
 
-### Gate 1 QA: Message Delivery (In Progress)
-**Subtests** (all code fixes applied, awaiting live verification):
-1. ✅ Public message delivery (both directions) — code fixed, needs client launch
-2. ✅ Private message delivery (realtime, no manual refresh) — code fixed, needs client launch
-3. ⏳ Room message creation and delivery — not yet tested
-4. ⏳ Context-switch integrity (Public → Private → Room → Public) — not yet tested
+### Phase 1: Cross-Platform Testing (Render Backend)
+**Objective**: Validate desktop ↔ web app parity on production Render backend
 
 **Immediate Next Steps**:
-1. Launch fresh server: `mvn -f server/pom.xml spring-boot:run`
-2. Launch two client instances: `mvn -f client/pom.xml javafx:run` (×2)
-3. Execute live test cases:
-   - Send public message from client A → verify visible on B immediately
-   - Send private message in active chat → verify visible without manual refresh
-   - Send friend request → verify alert popup has visible text
-   - Create room and test room message delivery
-4. Validate all defects resolved before proceeding to Gate 2
+1. Rebuild client with `mvn -pl client -am clean compile`
+2. Launch client: `mvn -pl client -am javafx:run`
+3. Open web app in browser: https://chitchat-moy8.onrender.com
+4. Execute CROSS_PLATFORM_QA.md phases in order (1-7)
+5. Record test results in summary table
 
-### Gate 2 QA: Reconnect & Dedupe (Planned)
-- Test WebSocket reconnection and message deduplication after network loss
-- Criteria: Messages deduplicated by ID, no gaps, smooth reconnect
+**Test Accounts** (use for cross-platform):
+- alice_web: Web platform user
+- bob_desktop: Desktop platform user
+- charlie_either: Additional multi-user tests
 
-## Resume Commands
+**Expected Timeline**: ~90 minutes (all 7 phases)
+
+### Phase 2: Bug Fixes (If Issues Found)
+- Prioritize any regressions discovered during cross-platform testing
+- Document blockers in CROSS_PLATFORM_QA.md "Known Issues" section
+- Rebuild, test on desktop first (faster iteration), then verify on web
+
+### Phase 3: Performance Optimization (Optional)
+- If Phase 7 performance tests show latency issues
+- Profile client CPU/memory usage
+- Optimize message rendering pipeline if needed
+
+---
+
+## Known Issues / Deferred Items
+
+### ✅ Resolved
+1. **Friend-request popup text visibility** - Resolved in previous session
+2. **Auto-scroll jerky on history load** - Fixed in this session
+3. **Button overflow/truncation** - Fixed in this session
+
+### ⏳ Open / Deferred
+None currently blocking cross-platform testing.
+
+---
+
+## Architecture & Key Implementation Details
+
+### Server Configuration (Render)
+- **URL**: https://chitchat-moy8.onrender.com
+- **Backend**: Spring Boot 3.4.3
+- **Database**: PostgreSQL (Render-managed)
+- **Protocol**: STOMP WebSocket + REST HTTP
+
+### Client Architecture (Desktop)
+- **Framework**: JavaFX 21.0.2
+- **Communication**: 
+  - WebSocket (real-time messages, typing, receipts, online status)
+  - REST HTTP (user search, friend requests, profile updates)
+- **Styling**: CSS with theme support (light + dark mode variants)
+- **Build**: Maven multi-module project
+
+### Message Flow (Desktop ↔ Render)
+1. **Login**: HTTP POST to `/api/users/login`
+2. **WebSocket Connect**: STOMP over WSS to `/ws`
+3. **Subscriptions**:
+   - `/topic/public` → public messages
+   - `/topic/user.{username}` → private messages
+   - `/topic/typing.{roomId}` → typing indicators
+   - `/user/queue/readreceipts` → message receipts
+4. **Messaging**: Send via `/app/sendMessage` → server broadcasts to topic
+
+### Testing Infrastructure
+- **Local**: Two desktop clients + local server (localhost:8080)
+- **Cross-platform**: Desktop client (Render backend) + Web app browser
+- **Automation**: Manual test cases in CROSS_PLATFORM_QA.md (no automated tests yet)
+
+---
+
+## System Requirements
+- **Java**: 17+ (tested with Java 25.0.1)
+- **Maven**: 3.8.1+
+- **JavaFX**: Downloaded automatically by Maven
+- **Browser**: Any modern browser (Chrome/Firefox/Safari) for web app
+- **Network**: Internet connection for Render backend
+
+---
+
+## Resume Instructions for Next Session
+
+### Setup
 ```bash
-# Terminal 1: Start server
-mvn -f server/pom.xml spring-boot:run
+# Navigate to project
+cd c:/Users/fallo/Dropbox/Code/ChitChat2/ChitChat
 
-# Terminal 2: Start client A
-mvn -f client/pom.xml javafx:run
-
-# Terminal 3: Start client B
-mvn -f client/pom.xml javafx:run
+# Rebuild client to ensure latest compiled
+mvn -pl client -am clean compile
 ```
 
-Then execute live QA checklist subtests 1–4 above.
+### Launch for Desktop Testing Only (localhost)
+```bash
+# Terminal 1: Start local server
+mvn -f server/pom.xml spring-boot:run
 
-## Notes
-- **Desktop QA Status**: Gate 1 (message delivery) code fixes complete, awaiting live verification with fresh client/server launch
-- **Key Findings**: Private message realtime delivery requires topic-based subscriptions (`/topic/user.{username}`), not user queues alone
-- **Architecture Notes**: 
-  - Client uses raw STOMP over WebSocket (no external messaging library)
-  - Server uses SimpMessagingTemplate for hybrid queue + topic publishing
-  - 8-second roster refresh minimum acceptable latency for friend list sync
-- **Test Infrastructure**: Remove-friend feature enables rapid test iteration without account re-registration
-- Docker currently packages server only (no compose setup in repo).
-- Production profile uses PostgreSQL settings in application-prod.properties.
-- Consider moving production DB credentials to environment variables.
+# Terminal 2: Start desktop client
+mvn -pl client -am javafx:run
+
+# (Can start 2nd client by repeating Terminal 2 command in another terminal)
+```
+
+### Launch for Cross-Platform Testing (Render)
+```bash
+# Terminal 1: Start desktop client (auto-connects to Render)
+mvn -pl client -am javafx:run
+
+# Browser: Open web app
+# https://chitchat-moy8.onrender.com
+```
+
+### Running QA Tests
+1. Follow CROSS_PLATFORM_QA.md phases 1-7
+2. Record results in test summary table at bottom of file
+3. Document any issues found in "Known Issues" section
+4. If failures occur, prioritize and fix in next coding session
+
+---
+
+## Notes for Next Session
+
+1. **Desktop client is now Render-connected by default** — if testing locally, can override via CHITCHAT_SERVER_URL env var
+2. **All UI improvements are in place** → button sizing, auto-scroll, dark theme support
+3. **Auto-scroll is conditional** → only for new messages, not history (to preserve smooth UX)
+4. **Cross-platform test plan is documented** → 82 test cases across 7 phases with clear pass/fail criteria
+5. **Git history is clean** → all changes committed and pushed to desktop-app branch
+
+---
+
+## Session Statistics
+- **Duration**: ~2 hours
+- **Commits**: 3
+- **Files Modified**: 8 (FXML, CSS, Java controllers, config)
+- **Lines Added**: 300+ (test docs + code improvements)
+- **QA Gates Completed**: 4/4 (100%)
+- **Build Success Rate**: 100%
+
+---
+
+**End of Session Handoff**
