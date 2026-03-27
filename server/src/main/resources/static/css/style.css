@@ -124,7 +124,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .message.private .msg-content { background: var(--bubble-private); color: #92400e; }
 .system-text { background: none !important; color: var(--text-muted) !important; font-size: 0.8rem; font-style: italic; }
 
-.message-bar { display: flex; gap: 0.75rem; padding: 1rem 1.5rem; background: var(--surface); border-top: 1px solid var(--border); }
+.message-bar { display: flex; align-items: center; gap: 0.75rem; padding: 1rem 1.5rem; background: var(--surface); border-top: 1px solid var(--border); flex-wrap: nowrap; }
 .message-bar input { flex: 1; padding: 0.65rem 1rem; border: 1px solid var(--border); border-radius: 24px; font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
 .message-bar input:focus { border-color: var(--primary); }
 .btn-send { padding: 0.65rem 1.4rem; background: var(--primary); color: white; border: none; border-radius: 24px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
@@ -302,20 +302,79 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 /* ===== Responsive mobile ===== */
 @media (max-width: 680px) {
   :root { --sidebar-width: 100vw; }
+
+  /* Layout */
   .icon-rail { display: none; }
-  .chat-layout { position: relative; }
+  .chat-layout { position: relative; overflow: hidden; }
   .sidebar {
     position: absolute; left: 0; top: 0; bottom: 0;
     width: 100%; z-index: 50;
     transform: translateX(0);
-    transition: transform .25s ease;
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
   }
   .sidebar.hidden-mobile { transform: translateX(-100%); }
   .chat-main { width: 100%; }
-  .chat-header { padding: .6rem 1rem; }
+
+  /* Header */
+  .chat-header { padding: .55rem .75rem; min-height: 54px; gap: 7px; }
   #back-btn { display: flex !important; }
-  .messages { padding: .75rem 1rem; }
-  .message-bar { padding: .6rem .75rem; }
+
+  /* Messages */
+  .messages { padding: .6rem .75rem; }
+  .msg-wrap { max-width: 82%; }
+
+  /* Message bar — compact, scrollable extras */
+  .message-bar {
+    padding: .45rem .6rem;
+    gap: .35rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: max(.45rem, env(safe-area-inset-bottom));
+  }
+  .message-bar form { flex-wrap: nowrap; }
+  .btn-attach, .btn-emoji, .btn-loc, .btn-mic { font-size: 1.1rem; padding: 0 2px; }
+  .btn-gif { width: 26px; height: 26px; font-size: .55rem; }
+  .btn-send { padding: .55rem 1rem; font-size: .85rem; }
+  #msg-input { font-size: .92rem; min-width: 0; }
+
+  /* Emoji picker — bottom sheet */
+  #emoji-picker {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    width: 100%; height: 52vh; max-height: 380px;
+    border-radius: 18px 18px 0 0;
+    border: none;
+    box-shadow: 0 -4px 24px rgba(0,0,0,.15);
+    z-index: 90;
+  }
+
+  /* Modals — full screen on mobile */
+  .modal-card {
+    width: 100%; max-width: 100%;
+    border-radius: 18px 18px 0 0;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 1.25rem 1rem;
+    max-height: 85vh; overflow-y: auto;
+  }
+  .modal { align-items: flex-end; }
+
+  /* GIF grid — 3 columns on mobile */
+  .gif-grid { grid-template-columns: repeat(3, 1fr); max-height: 55vh; }
+
+  /* Settings panel full width */
+  .settings-panel { width: 100%; max-width: 100%; }
+
+  /* Call screen — smaller pip */
+  #local-video { width: 100px; height: 80px; bottom: 80px; right: 12px; }
+  .call-controls { padding: .75rem 1rem; gap: .6rem; flex-wrap: wrap; justify-content: center; }
+  .btn-icon-lg { padding: .5rem .9rem; font-size: .82rem; }
+
+  /* Friend list items — bigger tap targets */
+  .user-list li { padding: .75rem .75rem; }
+  .friend-item { min-height: 58px; }
+
+  /* Auth page */
+  .auth-card { margin: 1rem; padding: 1.75rem 1.25rem; }
 }
 #back-btn { display: none; }
 
