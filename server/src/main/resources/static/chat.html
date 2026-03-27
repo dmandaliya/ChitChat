@@ -279,19 +279,28 @@ function renderRailAvatar(){
 function uploadOwnPic(input){
   var file=input.files[0];
   if(!file)return;
-  if(file.size>1*1024*1024){alert('Photo must be under 1 MB');input.value='';return;}
   var reader=new FileReader();
   reader.onload=function(e){
-    var b64=e.target.result;
-    localStorage.setItem('pic_'+currentUser.username,b64);
-    renderRailAvatar();
-    renderSettingsOwnAvatar();
-    renderFriendList();
-    // Persist to server so other users see your avatar
-    apiFetch('/api/users/'+encodeURIComponent(currentUser.username)+'/avatar',{
-      method:'PUT',
-      body:JSON.stringify({avatarUrl:b64})
-    });
+    var img=new Image();
+    img.onload=function(){
+      var MAX=256;
+      var w=img.width,h=img.height,s=Math.min(w,h);
+      var canvas=document.createElement('canvas');
+      canvas.width=MAX;canvas.height=MAX;
+      var ctx=canvas.getContext('2d');
+      // centre-crop to square
+      ctx.drawImage(img,(w-s)/2,(h-s)/2,s,s,0,0,MAX,MAX);
+      var b64=canvas.toDataURL('image/jpeg',0.8);
+      localStorage.setItem('pic_'+currentUser.username,b64);
+      renderRailAvatar();
+      renderSettingsOwnAvatar();
+      renderFriendList();
+      apiFetch('/api/users/'+encodeURIComponent(currentUser.username)+'/avatar',{
+        method:'PUT',
+        body:JSON.stringify({avatarUrl:b64})
+      });
+    };
+    img.src=e.target.result;
   };
   reader.readAsDataURL(file);
   input.value='';
@@ -790,21 +799,35 @@ document.addEventListener('visibilitychange',function(){
 });
 
 // ─── Image sharing ────────────────────────────────────────────────────────
+function compressAndSend(b64){
+  if(!stompClient||chatMode==='')return;
+  if(chatMode.startsWith('private:')){
+    var target=chatMode.split(':')[1];
+    var msg={type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:b64,timestamp:new Date().toISOString(),pending:true};
+    displayMessage(msg);
+    stompClient.send('/app/chat.sendPrivate',{},JSON.stringify(msg));
+    updateLastMsg(chatMode,'📷 Photo');
+  }else if(chatMode.startsWith('room:')){
+    var parts=chatMode.split(':');
+    stompClient.send('/app/chat.sendRoom',{},JSON.stringify({type:'ROOM_MESSAGE',sender:currentUser.username,receiver:null,roomId:parts[1],content:b64}));
+  }
+}
 function sendImage(input){
   if(!input.files||!input.files[0]||chatMode==='')return;
   var file=input.files[0];
-  if(file.size>2*1024*1024){alert('Image must be under 2 MB');input.value='';return;}
   var reader=new FileReader();
   reader.onload=function(e){
-    var b64=e.target.result;
-    if(chatMode.startsWith('private:')){
-      var target=chatMode.split(':')[1];
-      stompClient.send('/app/chat.sendPrivate',{},JSON.stringify({type:'PRIVATE_MESSAGE',sender:currentUser.username,receiver:target,content:b64}));
-      updateLastMsg(chatMode,'📷 Photo');
-    }else if(chatMode.startsWith('room:')){
-      var parts=chatMode.split(':');
-      stompClient.send('/app/chat.sendRoom',{},JSON.stringify({type:'ROOM_MESSAGE',sender:currentUser.username,receiver:null,roomId:parts[1],content:b64}));
-    }
+    var img=new Image();
+    img.onload=function(){
+      var MAX=1200;
+      var w=img.width,h=img.height;
+      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+      var canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      compressAndSend(canvas.toDataURL('image/jpeg',0.82));
+    };
+    img.src=e.target.result;
   };
   reader.readAsDataURL(file);
   input.value='';
@@ -849,35 +872,38 @@ function stopRecording(){
   }
 }
 
-// ─── GIF picker ───────────────────────────────────────────────────────────
-var GIPHY_KEY='dc6zaTOxFJmzC';
+// ─── GIF picker (Tenor) ───────────────────────────────────────────────────
+var TENOR_KEY='LIVDSRZULELA';
 var gifTimeout=null;
 function openGifPicker(){
   if(chatMode==='')return;
   document.getElementById('gif-modal').classList.remove('hidden');
   document.getElementById('gif-search').value='';
-  document.getElementById('gif-results').innerHTML='';
-  searchGifs('hello');
+  document.getElementById('gif-results').innerHTML='<div style="color:var(--text-muted);font-size:.82rem;padding:8px">Search for a GIF above…</div>';
   setTimeout(function(){document.getElementById('gif-search').focus();},100);
 }
 function searchGifs(q){
   clearTimeout(gifTimeout);
-  if(!q){document.getElementById('gif-results').innerHTML='';return;}
+  var grid=document.getElementById('gif-results');
+  if(!q){grid.innerHTML='<div style="color:var(--text-muted);font-size:.82rem;padding:8px">Search for a GIF above…</div>';return;}
+  grid.innerHTML='<div style="color:var(--text-muted);font-size:.82rem;padding:8px">Searching…</div>';
   gifTimeout=setTimeout(async function(){
     try{
-      var url='https://api.giphy.com/v1/gifs/search?api_key='+GIPHY_KEY+'&q='+encodeURIComponent(q)+'&limit=16&rating=g';
+      var url='https://api.tenor.com/v1/search?q='+encodeURIComponent(q)+'&key='+TENOR_KEY+'&limit=16&contentfilter=medium&media_filter=minimal';
       var res=await fetch(url);
       var data=await res.json();
-      var grid=document.getElementById('gif-results');
       grid.innerHTML='';
-      (data.data||[]).forEach(function(gif){
+      if(!data.results||data.results.length===0){grid.innerHTML='<div style="color:var(--text-muted);font-size:.82rem;padding:8px">No GIFs found</div>';return;}
+      data.results.forEach(function(gif){
+        var thumb=gif.media[0].tinygif?gif.media[0].tinygif.url:gif.media[0].gif.url;
+        var full=gif.media[0].gif.url;
         var img=document.createElement('img');
-        img.src=gif.images.fixed_height_small.url;
+        img.src=thumb;
         img.className='gif-thumb';
-        img.onclick=function(){sendGif(gif.images.original.url);};
+        img.onclick=function(){sendGif(full);};
         grid.appendChild(img);
       });
-    }catch(ex){}
+    }catch(ex){grid.innerHTML='<div style="color:#ef4444;font-size:.82rem;padding:8px">Failed to load GIFs</div>';}
   },400);
 }
 function sendGif(url){
