@@ -376,6 +376,38 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   /* Auth page */
   .auth-card { margin: 1rem; padding: 1.75rem 1.25rem; }
 }
+
+/* ===== Tablet (iPad portrait 768–1024px) ===== */
+@media (min-width: 681px) and (max-width: 1024px) {
+  :root { --sidebar-width: 280px; }
+
+  /* Slightly wider sidebar, hide icon rail to give more room */
+  .icon-rail { display: none; }
+
+  /* Bigger touch targets throughout */
+  .user-list li { padding: .8rem 1rem; min-height: 56px; }
+  .friend-item { min-height: 56px; }
+  .btn-attach, .btn-emoji, .btn-loc, .btn-mic { font-size: 1.2rem; padding: 0 4px; }
+  .btn-send { padding: .7rem 1.3rem; }
+  .btn-call-icon { padding: 8px 10px; font-size: 1.2rem; }
+
+  /* Message bar comfortable spacing */
+  .message-bar { padding: .8rem 1.2rem; gap: .6rem; align-items: center; }
+  #msg-input { font-size: 1rem; }
+
+  /* Slightly wider bubbles */
+  .msg-wrap { max-width: 72%; }
+
+  /* Modals centered, not too wide */
+  .modal-card { max-width: 480px; }
+
+  /* GIF grid */
+  .gif-grid { grid-template-columns: repeat(4, 1fr); }
+
+  /* Auth */
+  .auth-card { max-width: 440px; }
+}
+
 #back-btn { display: none; }
 
 /* ===== Chat header status ===== */
