@@ -1,15 +1,25 @@
 package com.chitchat.server.controller;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.chitchat.server.model.UserEntity;
 import com.chitchat.server.service.FriendService;
 import com.chitchat.server.service.UserService;
 import com.chitchat.shared.UserPreferences;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -146,13 +156,28 @@ public class UserController {
     @GetMapping("/{username}/profile")
     public ResponseEntity<?> getProfile(@PathVariable String username) {
         UserEntity user = userService.findByUsername(username);
+        UserPreferences prefs = user.getPreferences() != null ? user.getPreferences() : new UserPreferences();
         var m = new LinkedHashMap<String, String>();
         m.put("username", user.getUsername());
         m.put("fname", user.getFname());
         m.put("lname", user.getLname());
         m.put("lastSeen", user.getLastOnline() != null ? user.getLastOnline() : "");
         m.put("avatarUrl", user.getAvatarUrl() != null ? user.getAvatarUrl() : "");
+        m.put("status", prefs.getStatus() != null ? prefs.getStatus() : "Online");
+        m.put("bio", prefs.getBio() != null ? prefs.getBio() : "");
         return ResponseEntity.ok(m);
+    }
+
+    @PutMapping("/{username}/profile")
+    public ResponseEntity<?> updateProfile(@PathVariable String username,
+                                           @RequestBody Map<String, String> body) {
+        UserEntity user = userService.findByUsername(username);
+        UserPreferences prefs = user.getPreferences() != null ? user.getPreferences() : new UserPreferences();
+        prefs.setStatus(body.getOrDefault("status", "Online"));
+        prefs.setBio(body.getOrDefault("bio", ""));
+        user.setPreferences(prefs);
+        userService.save(user);
+        return ResponseEntity.ok(Map.of("message", "Profile updated"));
     }
 
     // ── Preferences ────────────────────────────────────────────────────────────

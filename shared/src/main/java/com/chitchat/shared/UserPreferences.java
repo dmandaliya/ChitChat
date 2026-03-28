@@ -22,6 +22,10 @@ public class UserPreferences implements Serializable {
     private boolean onlineStatus = true;
     private boolean lastSeen = true;
 
+    // Lightweight profile fields stored with preferences
+    private String status = "Online";
+    private String bio = "";
+
     public UserPreferences() {}
 
     public boolean isDarkMode() { return darkMode; }
@@ -47,4 +51,10 @@ public class UserPreferences implements Serializable {
 
     public boolean isLastSeen() { return lastSeen; }
     public void setLastSeen(boolean lastSeen) { this.lastSeen = lastSeen; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
 }
