@@ -103,6 +103,7 @@ public class ChatController implements Initializable {
     @FXML private Button attachImageButton;
     @FXML private Button gifButton;
     @FXML private Button micButton;
+    @FXML private Button locationButton;
 
     private final WebSocketService wsService = new WebSocketService();
     private final ApiService apiService = new ApiService(ChatClientApp.SERVER_URL);
@@ -436,10 +437,15 @@ public class ChatController implements Initializable {
     private void fetchGifs(String query, FlowPane grid, Label status, Stage gifStage) {
         grid.getChildren().clear();
         status.setText("Loading…");
-        String q = query.isBlank() ? "trending" : query;
-        String encodedQ = URLEncoder.encode(q, StandardCharsets.UTF_8);
-        String apiUrl = "https://tenor.googleapis.com/v2/search?q=" + encodedQ
-                + "&key=" + TENOR_KEY + "&limit=24&media_filter=gif";
+        String apiUrl;
+        if (query.isBlank()) {
+            apiUrl = "https://tenor.googleapis.com/v2/featured?key=" + TENOR_KEY
+                    + "&limit=24&media_filter=tinygif,gif";
+        } else {
+            String encodedQ = URLEncoder.encode(query, StandardCharsets.UTF_8);
+            apiUrl = "https://tenor.googleapis.com/v2/search?q=" + encodedQ
+                    + "&key=" + TENOR_KEY + "&limit=24&media_filter=tinygif,gif";
+        }
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -448,34 +454,41 @@ public class ChatController implements Initializable {
                     String body = resp.body() != null ? resp.body().string() : "{}";
                     JsonNode root = mapper.readTree(body);
                     JsonNode results = root.path("results");
-                    List<String> urls = new ArrayList<>();
+                    List<String[]> gifEntries = new ArrayList<>(); // [thumbUrl, fullUrl]
                     for (JsonNode r : results) {
-                        String gifUrl = r.path("media_formats").path("gif").path("url").asText();
-                        if (!gifUrl.isBlank()) urls.add(gifUrl);
+                        JsonNode formats = r.path("media_formats");
+                        // Prefer tinygif for thumbnail display, fall back to gif
+                        String thumbUrl = formats.path("tinygif").path("url").asText();
+                        String fullUrl  = formats.path("gif").path("url").asText();
+                        if (thumbUrl.isBlank()) thumbUrl = fullUrl;
+                        if (fullUrl.isBlank())  fullUrl  = thumbUrl;
+                        if (!fullUrl.isBlank()) gifEntries.add(new String[]{thumbUrl, fullUrl});
                     }
+                    final List<String[]> entries = gifEntries;
                     Platform.runLater(() -> {
                         status.setText("");
                         grid.getChildren().clear();
-                        if (urls.isEmpty()) {
+                        if (entries.isEmpty()) {
                             status.setText("No GIFs found.");
                             return;
                         }
-                        for (String gifUrl : urls) {
-                            Image img = new Image(gifUrl, 140, 100, true, true, true);
+                        for (String[] entry : entries) {
+                            String thumbUrl = entry[0], fullUrl = entry[1];
+                            Image img = new Image(thumbUrl, 140, 100, true, true, true);
                             ImageView iv = new ImageView(img);
                             iv.setFitWidth(140);
                             iv.setFitHeight(100);
                             iv.getStyleClass().add("gif-thumb");
                             iv.setOnMouseClicked(e -> {
                                 gifStage.close();
-                                sendContent(gifUrl);
+                                sendContent(fullUrl);
                             });
                             grid.getChildren().add(iv);
                         }
                     });
                 }
             } catch (Exception ex) {
-                Platform.runLater(() -> status.setText("Failed: " + ex.getMessage()));
+                Platform.runLater(() -> status.setText("Failed to load GIFs: " + ex.getMessage()));
             }
         });
     }
@@ -542,6 +555,47 @@ public class ChatController implements Initializable {
 
     private void stopRecording() {
         isRecording = false;
+    }
+
+    @FXML
+    private void handleSendLocation() {
+        locationButton.setDisable(true);
+        locationButton.setText("⏳");
+        CompletableFuture.runAsync(() -> {
+            try {
+                okhttp3.Request req = new okhttp3.Request.Builder()
+                        .url("http://ip-api.com/json?fields=city,regionName,country,lat,lon,status")
+                        .build();
+                try (okhttp3.Response resp = apiService.getHttp().newCall(req).execute()) {
+                    String body = resp.body() != null ? resp.body().string() : "{}";
+                    JsonNode json = mapper.readTree(body);
+                    String status = json.path("status").asText();
+                    Platform.runLater(() -> {
+                        locationButton.setDisable(false);
+                        locationButton.setText("📍");
+                        if ("success".equals(status)) {
+                            String city    = json.path("city").asText("Unknown");
+                            String region  = json.path("regionName").asText("");
+                            String country = json.path("country").asText("");
+                            double lat     = json.path("lat").asDouble();
+                            double lon     = json.path("lon").asDouble();
+                            String msg = "📍 " + city + (region.isBlank() ? "" : ", " + region)
+                                    + ", " + country + " (" + lat + ", " + lon + ")"
+                                    + " — https://maps.google.com/?q=" + lat + "," + lon;
+                            sendContent(msg);
+                        } else {
+                            showError("Could not detect location.");
+                        }
+                    });
+                }
+            } catch (Exception ex) {
+                Platform.runLater(() -> {
+                    locationButton.setDisable(false);
+                    locationButton.setText("📍");
+                    showError("Location error: " + ex.getMessage());
+                });
+            }
+        });
     }
 
     private void resetMicButton() {
@@ -727,6 +781,27 @@ public class ChatController implements Initializable {
             content.setGraphic(msgNode);
 
             attachReactionMenu(content, bubble, msg);
+            // Add "Delete" to the context menu for the sender's own messages
+            if (isMine && msg.getId() != null && !msg.getId().isBlank()) {
+                HBox finalRow = row;
+                ContextMenu cm = content.getContextMenu();
+                if (cm == null) { cm = new ContextMenu(); content.setContextMenu(cm); }
+                MenuItem deleteItem = new MenuItem("🗑 Delete message");
+                final String msgId = msg.getId();
+                deleteItem.setOnAction(ev -> {
+                    String username = UserSession.getInstance().getUsername();
+                    CompletableFuture.runAsync(() -> {
+                        try {
+                            apiService.deleteMessage(msgId, username);
+                            Platform.runLater(() -> messagesBox.getChildren().remove(finalRow));
+                        } catch (IOException ex) {
+                            Platform.runLater(() -> showError("Delete failed: " + ex.getMessage()));
+                        }
+                    });
+                });
+                cm.getItems().add(new SeparatorMenuItem());
+                cm.getItems().add(deleteItem);
+            }
             bubble.getChildren().add(content);
 
             HBox meta = new HBox(6);
@@ -1511,10 +1586,15 @@ public class ChatController implements Initializable {
     @FXML private void handlePreferences() {
         String username = UserSession.getInstance().getUsername();
         CompletableFuture.runAsync(() -> {
+            UserPreferences prefs;
             try {
-                UserPreferences prefs = apiService.getPreferences(username);
-                Platform.runLater(() -> showPreferencesDialog(prefs));
-            } catch (IOException e) { Platform.runLater(() -> showError("Failed to load preferences: " + e.getMessage())); }
+                prefs = apiService.getPreferences(username);
+            } catch (IOException e) {
+                // Fall back to cached preferences so the dialog always opens
+                prefs = activePreferences != null ? activePreferences : new UserPreferences();
+            }
+            final UserPreferences finalPrefs = prefs;
+            Platform.runLater(() -> showPreferencesDialog(finalPrefs));
         });
     }
 

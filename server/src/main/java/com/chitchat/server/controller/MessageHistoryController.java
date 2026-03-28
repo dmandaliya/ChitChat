@@ -49,4 +49,15 @@ public class MessageHistoryController {
     public List<ChatMessage> getRoom(@PathVariable String roomId) {
         return chatMessageService.getRoomHistory(roomId);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteMessage(@PathVariable String id,
+                                           @RequestParam String username) {
+        try {
+            chatMessageService.deleteMessage(id, username);
+            return ResponseEntity.ok(Map.of("message", "Deleted"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

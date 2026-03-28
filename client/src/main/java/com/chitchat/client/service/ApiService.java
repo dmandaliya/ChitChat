@@ -136,6 +136,21 @@ public class ApiService {
         post("/api/messages/" + messageId + "/react", Map.of("username", username, "emoji", emoji));
     }
 
+    public void deleteMessage(String messageId, String username) throws IOException {
+        Request request = new Request.Builder()
+                .url(baseUrl + "/api/messages/" + messageId + "?username=" + username)
+                .delete()
+                .build();
+        try (Response response = http.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String body = response.body() != null ? response.body().string() : "{}";
+                Map<?, ?> result = mapper.readValue(body, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String,Object>>(){});
+                Object err = result.get("error");
+                throw new IOException(err != null ? err.toString() : "Delete failed");
+            }
+        }
+    }
+
     public List<Map<String, Object>> getPublicMessages() throws IOException {
         return getList("/api/messages/public");
     }

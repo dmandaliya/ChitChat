@@ -101,6 +101,8 @@ public class ChatController {
         String receiver = message.getReceiver();
         String sender = message.getSender();
         if (receiver == null || sender == null) return;
+        // Drop the message if the receiver has blocked the sender.
+        if (userService.isBlocked(receiver, sender)) return;
         message.setId(UUID.randomUUID().toString());
         messageSenders.put(message.getId(), sender);
         chatMessageService.save(message);

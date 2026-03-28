@@ -108,6 +108,11 @@ public class UserService {
         return findByUsername(username).getBlockedList();
     }
 
+    public boolean isBlocked(String username, String potentialSender) {
+        return findByUsername(username).getBlockedList().stream()
+                .anyMatch(u -> u.getUsername().equals(potentialSender));
+    }
+
     // Delegates to a JPQL LIKE query that searches both username and display name
     // (case-insensitive) — see UserRepository.searchByUsernameOrName.
     public List<UserEntity> searchUsers(String q) {

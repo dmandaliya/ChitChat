@@ -70,14 +70,55 @@
     <h3>Settings</h3>
     <button class="settings-close" onclick="closeSettings()">&#x2715;</button>
   </div>
-  <div class="settings-section">
+
+  <!-- Tab bar -->
+  <div class="settings-tabs">
+    <button class="stab active" data-tab="s-profile"   onclick="switchSettingsTab(this,'s-profile')">👤 Profile</button>
+    <button class="stab"        data-tab="s-privacy"   onclick="switchSettingsTab(this,'s-privacy')">🔒 Privacy</button>
+    <button class="stab"        data-tab="s-chat"      onclick="switchSettingsTab(this,'s-chat')">💬 Chat</button>
+    <button class="stab"        data-tab="s-notifs"    onclick="switchSettingsTab(this,'s-notifs')">🔔 Notifications</button>
+    <button class="stab"        data-tab="s-help"      onclick="switchSettingsTab(this,'s-help')">❓ Help</button>
+  </div>
+
+  <!-- PROFILE tab -->
+  <div class="settings-section stab-content" id="s-profile">
     <h4>Profile Picture</h4>
     <div class="profile-pic-upload" onclick="document.getElementById('own-pic-input').click()">
       <div id="settings-own-avatar"></div>
-      <span>Click to upload a photo</span>
+      <span>Click to change photo</span>
     </div>
+    <h4 style="margin-top:14px">Display Name &amp; Status</h4>
+    <input type="text" id="sp-fname" placeholder="First name" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--gray);margin-bottom:6px;box-sizing:border-box;font-size:.9rem"/>
+    <input type="text" id="sp-lname" placeholder="Last name"  style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--gray);margin-bottom:6px;box-sizing:border-box;font-size:.9rem"/>
+    <select id="sp-status" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--gray);margin-bottom:6px;font-size:.9rem">
+      <option>Online</option><option>Away</option><option>Busy</option><option>Offline</option>
+    </select>
+    <textarea id="sp-bio" rows="3" placeholder="Write a bio…" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--gray);resize:none;box-sizing:border-box;font-size:.9rem;margin-bottom:8px"></textarea>
+    <button class="btn-primary" style="width:100%" onclick="saveSettingsProfile()">Save Profile</button>
+    <p id="sp-msg" style="font-size:.8rem;min-height:16px;margin-top:4px"></p>
   </div>
-  <div class="settings-section">
+
+  <!-- PRIVACY tab -->
+  <div class="settings-section stab-content hidden" id="s-privacy">
+    <h4>Block a User</h4>
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <input type="text" id="priv-block-input" placeholder="Enter username" style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--gray);font-size:.9rem"/>
+      <button class="btn-primary" style="white-space:nowrap" onclick="privacyBlockUser()">Block</button>
+    </div>
+    <h4>Blocked Users</h4>
+    <ul id="priv-blocked-list" style="list-style:none;padding:0;margin:0;max-height:180px;overflow-y:auto"></ul>
+    <p id="priv-msg" style="font-size:.8rem;min-height:16px;margin-top:6px"></p>
+    <h4 style="margin-top:14px">Visibility</h4>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;cursor:pointer;margin-bottom:6px">
+      <input type="checkbox" id="priv-show-online" onchange="savePrivacySettings()"/> Show my online status
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;cursor:pointer">
+      <input type="checkbox" id="priv-show-lastseen" onchange="savePrivacySettings()"/> Show last seen
+    </label>
+  </div>
+
+  <!-- CHAT tab -->
+  <div class="settings-section stab-content hidden" id="s-chat">
     <h4>Chat Background</h4>
     <div class="bg-presets">
       <div class="bg-preset selected" data-bg="default" style="background:#e8f1f2;color:#555">Default</div>
@@ -89,7 +130,102 @@
       <div class="bg-preset" data-bg="gradient5" style="background:linear-gradient(135deg,#fa709a,#fee140)">Sunset</div>
       <div class="bg-preset" data-bg="gradient6" style="background:linear-gradient(135deg,#30cfd0,#667eea)">Ocean</div>
     </div>
-    <button class="btn-secondary" style="width:100%;font-size:.85rem" onclick="document.getElementById('bg-img-input').click()">&#128247; Upload image or GIF</button>
+    <button class="btn-secondary" style="width:100%;font-size:.85rem;margin-top:6px" onclick="document.getElementById('bg-img-input').click()">&#128247; Upload image or GIF</button>
+    <h4 style="margin-top:14px">Font Size</h4>
+    <div style="display:flex;gap:6px">
+      <button class="chat-font-btn" data-size="small"  onclick="setChatFontSize('small')">Small</button>
+      <button class="chat-font-btn" data-size="medium" onclick="setChatFontSize('medium')">Medium</button>
+      <button class="chat-font-btn" data-size="large"  onclick="setChatFontSize('large')">Large</button>
+    </div>
+    <h4 style="margin-top:14px">Enter Key Behaviour</h4>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;cursor:pointer">
+      <input type="checkbox" id="chat-enter-send" onchange="saveChatSettings()" checked/> Press Enter to send
+    </label>
+  </div>
+
+  <!-- NOTIFICATIONS tab -->
+  <div class="settings-section stab-content hidden" id="s-notifs">
+    <h4>Browser Notifications</h4>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;cursor:pointer;margin-bottom:8px">
+      <input type="checkbox" id="notif-enable" onchange="toggleNotifPermission()"/> Enable desktop notifications
+    </label>
+    <p id="notif-permission-msg" style="font-size:.8rem;color:var(--text-muted);margin-bottom:10px"></p>
+    <h4>Notification Sounds</h4>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;cursor:pointer;margin-bottom:8px">
+      <input type="checkbox" id="notif-sound" onchange="saveNotifSettings()" checked/> Play sound on new message
+    </label>
+    <h4>Preview</h4>
+    <label style="display:flex;align-items:center;gap:8px;font-size:.9rem;cursor:pointer">
+      <input type="checkbox" id="notif-preview" onchange="saveNotifSettings()" checked/> Show message preview in notification
+    </label>
+  </div>
+
+  <!-- HELP tab -->
+  <div class="settings-section stab-content hidden" id="s-help">
+    <h4>About ChitChat</h4>
+    <p style="font-size:.88rem;color:var(--text-muted);line-height:1.6">
+      ChitChat v2.0 &mdash; a real-time messaging app built with Spring Boot, WebSocket (STOMP), JavaFX, and vanilla JS.<br/>
+      COMP.2800 &bull; University of Windsor &bull; Winter 2026 &bull; Group 7
+    </p>
+    <h4 style="margin-top:14px">Keyboard Shortcuts</h4>
+    <table style="font-size:.85rem;border-collapse:collapse;width:100%">
+      <tr><td style="padding:3px 8px 3px 0;color:var(--text-muted)">Enter</td><td>Send message</td></tr>
+      <tr><td style="padding:3px 8px 3px 0;color:var(--text-muted)">Esc</td><td>Close modals / panels</td></tr>
+      <tr><td style="padding:3px 8px 3px 0;color:var(--text-muted)">Right-click message</td><td>Delete / React</td></tr>
+      <tr><td style="padding:3px 8px 3px 0;color:var(--text-muted)">Right-click friend</td><td>Block / Remove friend</td></tr>
+    </table>
+    <h4 style="margin-top:14px">Report a Problem</h4>
+    <p style="font-size:.88rem">
+      Found a bug? Open an issue on <a href="https://github.com/dmandaliya/ChitChat" target="_blank" style="color:var(--primary)">GitHub ↗</a>
+    </p>
+  </div>
+</div>
+
+<!-- Context menus -->
+<div id="ctx-menu" class="ctx-menu hidden">
+  <div id="ctx-delete"  class="ctx-item ctx-danger" onclick="ctxDeleteMsg()">🗑 Delete message</div>
+  <div id="ctx-react"   class="ctx-item"            onclick="ctxReactMsg()">😊 Add reaction</div>
+</div>
+<div id="friend-ctx-menu" class="ctx-menu hidden">
+  <div class="ctx-item ctx-danger" onclick="ctxBlockFriend()">⛔ Block &amp; remove</div>
+  <div class="ctx-item"            onclick="ctxRemoveFriend()">✖ Remove friend</div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="modal hidden" id="profile-modal">
+  <div class="modal-card" style="max-width:380px">
+    <h3>My Profile</h3>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:14px">
+      <div id="profile-avatar-big" style="width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff"></div>
+      <div id="profile-full-name" style="font-weight:700;font-size:1rem"></div>
+      <div id="profile-username-lbl" style="color:var(--text-muted);font-size:.85rem"></div>
+    </div>
+    <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:4px">Status</label>
+    <select id="profile-status" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--gray);margin-bottom:10px;font-size:.9rem">
+      <option>Online</option><option>Away</option><option>Busy</option><option>Offline</option>
+    </select>
+    <label style="font-size:.82rem;color:var(--text-muted);display:block;margin-bottom:4px">Bio</label>
+    <textarea id="profile-bio" rows="3" placeholder="Tell people about yourself…" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--gray);font-size:.9rem;resize:none;box-sizing:border-box;margin-bottom:10px"></textarea>
+    <p id="profile-msg" style="font-size:.82rem;min-height:18px;margin-bottom:6px"></p>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="hideProfile()">Cancel</button>
+      <button class="btn-primary" onclick="saveProfile()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- GIF PICKER MODAL -->
+<div class="modal hidden" id="gif-modal">
+  <div class="modal-card" style="max-width:520px;width:96vw">
+    <h3>Send a GIF</h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input type="text" id="gif-search-input" placeholder="Search GIFs…" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--gray);font-size:.9rem" oninput="fetchGifs(this.value)"/>
+    </div>
+    <div id="gif-status" style="font-size:.82rem;color:var(--text-muted);min-height:18px;margin-bottom:6px"></div>
+    <div id="gif-grid" style="display:flex;flex-wrap:wrap;gap:4px;max-height:300px;overflow-y:auto"></div>
+    <div class="modal-actions" style="margin-top:10px">
+      <button class="btn-secondary" onclick="hideGifPicker()">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -109,7 +245,7 @@
     <button class="rail-btn" onclick="toggleSettings()" title="Settings">
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
-    <div class="rail-own-avatar" id="rail-own-avatar" onclick="toggleSettings()" title="My profile"></div>
+    <div class="rail-own-avatar" id="rail-own-avatar" onclick="showProfile()" title="My profile"></div>
   </div>
 
   <aside class="sidebar">
@@ -164,7 +300,10 @@
 
     <form class="message-bar" onsubmit="sendMessage(event)">
       <button type="button" class="btn-attach" onclick="document.getElementById('img-input').click()" title="Send image">📎</button>
+      <button type="button" class="btn-gif-web" onclick="showGifPicker()" title="Send GIF">GIF</button>
       <button type="button" class="btn-emoji" onclick="toggleEmojiPicker(event)" title="Emoji">😊</button>
+      <button type="button" class="btn-attach" id="mic-btn" onclick="toggleMicRecord()" title="Voice message">🎤</button>
+      <button type="button" class="btn-attach" onclick="sendLocation()" title="Share location">📍</button>
       <input type="text" id="msg-input" placeholder="Type a message&hellip;" autocomplete="off" oninput="onTyping()"/>
       <button type="submit" class="btn-send" title="Send">&#10148;</button>
     </form>
@@ -295,26 +434,7 @@ function uploadBackground(input){
   input.value='';
 }
 
-// ─── Settings panel ────────────────────────────────────────────────────────
-function toggleSettings(){
-  var panel=document.getElementById('settings-panel');
-  var overlay=document.getElementById('settings-overlay');
-  var isOpen=panel.classList.contains('open');
-  if(isOpen){closeSettings();}
-  else{
-    panel.classList.add('open');
-    overlay.classList.add('open');
-    renderSettingsOwnAvatar();
-    document.querySelectorAll('.bg-preset').forEach(function(el){
-      el.onclick=function(){selectBackground(el.dataset.bg);};
-      el.classList.toggle('selected',localStorage.getItem('chatBg')===el.dataset.bg);
-    });
-  }
-}
-function closeSettings(){
-  document.getElementById('settings-panel').classList.remove('open');
-  document.getElementById('settings-overlay').classList.remove('open');
-}
+// ─── Settings panel — handled by new toggleSettings above ─────────────────
 
 // ─── Rail view ─────────────────────────────────────────────────────────────
 function setRailView(view){
@@ -455,6 +575,7 @@ function renderFriendList(){
     var isTyping=typingTimers[username]&&typingTimers[username].showing;
     var li=document.createElement('li');
     li.className='friend-item'+(isActive?' active-target':'')+(isOnline?'':' friend-offline');
+    li.dataset.username=username;
     li.innerHTML=
       '<div class="friend-avatar-wrap">'+
         avatarHtml(username,'36px')+
@@ -623,7 +744,11 @@ function handleMessage(msg){
 }
 
 function updateLastMsg(convKey,content){
-  var preview=content.startsWith('data:image/')?'📷 Photo':content;
+  var preview=content.startsWith('data:image/')?'📷 Photo'
+             :content.startsWith('data:audio/')?'🎤 Voice message'
+             :(content.includes('media.tenor.com')||content.includes('c.tenor.com'))?'🎬 GIF'
+             :content.startsWith('📍')?'📍 Location'
+             :content;
   lastMessages[convKey]=preview.length>30?preview.slice(0,30)+'\u2026':preview;
   renderFriendList();
 }
@@ -689,6 +814,9 @@ function displayMessage(msg){
   var isSystem=msg.sender==='System';
   var isPrivate=msg.type==='PRIVATE_MESSAGE';
   var isImage=msg.content&&msg.content.startsWith('data:image/');
+  var isAudio=msg.content&&msg.content.startsWith('data:audio/');
+  var isGif=msg.content&&(msg.content.includes('media.tenor.com')||msg.content.includes('c.tenor.com'));
+  var isLocation=msg.content&&msg.content.startsWith('📍')&&msg.content.includes('maps.google.com');
   var wrap=document.createElement('div');
   wrap.classList.add('msg-wrap',isMine?'mine':'theirs');
   if(msg.id)wrap.dataset.msgId=msg.id;
@@ -698,9 +826,22 @@ function displayMessage(msg){
     var label='';
     if(!isMine)label=isPrivate?esc(msg.sender)+' \u2192 You':esc(msg.sender);
     else if(isPrivate)label='You \u2192 '+esc(msg.receiver);
-    var contentHtml=isImage
-      ?'<img src="'+msg.content+'" class="msg-image" onclick="viewImage(this.src)"/>'
-      :esc(msg.content);
+    var contentHtml;
+    if(isImage){
+      contentHtml='<img src="'+msg.content+'" class="msg-image" onclick="viewImage(this.src)"/>';
+    }else if(isAudio){
+      contentHtml='<audio controls src="'+msg.content+'" style="max-width:220px;height:36px"></audio>';
+    }else if(isGif){
+      contentHtml='<img src="'+msg.content+'" class="msg-image" style="max-width:220px;border-radius:8px" onclick="viewImage(this.src)"/>';
+    }else if(isLocation){
+      var mapUrl=msg.content.match(/(https:\/\/maps\.google\.com\/\S+)/);
+      var label=msg.content.split('—')[0].trim();
+      contentHtml=mapUrl
+        ?esc(label)+'<br/><a href="'+mapUrl[1]+'" target="_blank" style="font-size:.8rem;color:#4c6fff">Open in Google Maps ↗</a>'
+        :esc(msg.content);
+    }else{
+      contentHtml=esc(msg.content);
+    }
     var time=formatTime(msg.timestamp||msg.sentAt||null);
     var bubbleHover=msg.id?' onmouseenter="showReactionPicker(event,\''+msg.id+'\')"':'';
     var metaTheirs=time?'<div class="msg-meta"><span class="msg-time">'+time+'</span></div>':'';
@@ -973,6 +1114,360 @@ async function logout(){
 }
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ─── Settings tabs ────────────────────────────────────────────────────────
+function switchSettingsTab(btn,tabId){
+  document.querySelectorAll('.stab').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.stab-content').forEach(function(c){c.classList.add('hidden');});
+  btn.classList.add('active');
+  document.getElementById(tabId).classList.remove('hidden');
+  if(tabId==='s-profile') loadSettingsProfile();
+  if(tabId==='s-privacy') loadPrivacySettings();
+  if(tabId==='s-notifs')  loadNotifSettings();
+  if(tabId==='s-chat')    loadChatSettings();
+}
+function toggleSettings(){
+  var panel=document.getElementById('settings-panel');
+  var overlay=document.getElementById('settings-overlay');
+  var isOpen=panel.classList.contains('open');
+  if(isOpen){closeSettings();}
+  else{
+    panel.classList.add('open');
+    overlay.classList.add('open');
+    renderSettingsOwnAvatar();
+    document.querySelectorAll('.bg-preset').forEach(function(el){
+      el.onclick=function(){selectBackground(el.dataset.bg);};
+      el.classList.toggle('selected',localStorage.getItem('chatBg')===el.dataset.bg);
+    });
+    loadSettingsProfile();
+  }
+}
+function closeSettings(){
+  document.getElementById('settings-panel').classList.remove('open');
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+// ─── Settings: Profile tab ────────────────────────────────────────────────
+function loadSettingsProfile(){
+  if(!currentUser)return;
+  document.getElementById('sp-fname').value=currentUser.fname||'';
+  document.getElementById('sp-lname').value=currentUser.lname||'';
+  fetch('/api/users/'+currentUser.username+'/profile').then(function(r){return r.json();}).then(function(p){
+    if(p.status)document.getElementById('sp-status').value=p.status;
+    document.getElementById('sp-bio').value=p.bio||'';
+  }).catch(function(){});
+}
+async function saveSettingsProfile(){
+  var msg=document.getElementById('sp-msg');
+  var status=document.getElementById('sp-status').value;
+  var bio=document.getElementById('sp-bio').value;
+  try{
+    var res=await fetch('/api/users/'+currentUser.username+'/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status,bio:bio})});
+    if(res.ok){msg.style.color='#22c55e';msg.textContent='Saved!';}
+    else{var d=await res.json();msg.style.color='#ef4444';msg.textContent=d.error||'Failed.';}
+  }catch(ex){msg.style.color='#ef4444';msg.textContent='Error: '+ex.message;}
+  setTimeout(function(){msg.textContent='';},3000);
+}
+
+// ─── Settings: Privacy tab ────────────────────────────────────────────────
+async function loadPrivacySettings(){
+  if(!currentUser)return;
+  var saved=JSON.parse(localStorage.getItem('privacy_'+currentUser.username)||'{}');
+  document.getElementById('priv-show-online').checked   = saved.showOnline   !== false;
+  document.getElementById('priv-show-lastseen').checked = saved.showLastSeen !== false;
+  try{
+    var res=await fetch('/api/users/'+currentUser.username+'/blocked');
+    var list=await res.json();
+    renderBlockedList(list);
+  }catch(ex){}
+}
+function renderBlockedList(list){
+  var ul=document.getElementById('priv-blocked-list');
+  ul.innerHTML='';
+  if(!list||list.length===0){
+    ul.innerHTML='<li style="font-size:.85rem;color:var(--text-muted);font-style:italic;padding:4px 0">No blocked users</li>';
+    return;
+  }
+  list.forEach(function(u){
+    var li=document.createElement('li');
+    li.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:.9rem;border-bottom:1px solid var(--gray)';
+    li.innerHTML='<span>'+esc(u.username)+'</span><button class="btn-secondary" style="font-size:.78rem;padding:3px 8px" onclick="unblockUser(\''+esc(u.username)+'\')">Unblock</button>';
+    ul.appendChild(li);
+  });
+}
+async function privacyBlockUser(){
+  var input=document.getElementById('priv-block-input');
+  var msg=document.getElementById('priv-msg');
+  var target=input.value.trim();
+  if(!target)return;
+  try{
+    var res=await fetch('/api/users/'+currentUser.username+'/blocked',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUsername:target})});
+    if(res.ok){input.value='';msg.style.color='#22c55e';msg.textContent=target+' blocked.';loadPrivacySettings();}
+    else{var d=await res.json();msg.style.color='#ef4444';msg.textContent=d.error||'Failed.';}
+  }catch(ex){msg.style.color='#ef4444';msg.textContent='Error: '+ex.message;}
+  setTimeout(function(){msg.textContent='';},3000);
+}
+async function unblockUser(target){
+  await fetch('/api/users/'+currentUser.username+'/blocked/'+target,{method:'DELETE'});
+  loadPrivacySettings();
+}
+function savePrivacySettings(){
+  if(!currentUser)return;
+  localStorage.setItem('privacy_'+currentUser.username,JSON.stringify({
+    showOnline:  document.getElementById('priv-show-online').checked,
+    showLastSeen:document.getElementById('priv-show-lastseen').checked
+  }));
+}
+
+// ─── Settings: Chat tab ───────────────────────────────────────────────────
+function loadChatSettings(){
+  if(!currentUser)return;
+  var saved=JSON.parse(localStorage.getItem('chat_settings')||'{}');
+  var sz=saved.fontSize||'medium';
+  document.querySelectorAll('.chat-font-btn').forEach(function(b){
+    b.classList.toggle('active',b.dataset.size===sz);
+  });
+  document.getElementById('chat-enter-send').checked=saved.enterSend!==false;
+  applyChatFontSize(sz);
+}
+function saveChatSettings(){
+  var sz=localStorage.getItem('chat_font')||'medium';
+  var enterSend=document.getElementById('chat-enter-send').checked;
+  localStorage.setItem('chat_settings',JSON.stringify({fontSize:sz,enterSend:enterSend}));
+}
+function setChatFontSize(sz){
+  localStorage.setItem('chat_font',sz);
+  applyChatFontSize(sz);
+  document.querySelectorAll('.chat-font-btn').forEach(function(b){b.classList.toggle('active',b.dataset.size===sz);});
+  saveChatSettings();
+}
+function applyChatFontSize(sz){
+  var messages=document.getElementById('messages');
+  if(!messages)return;
+  messages.style.fontSize=sz==='small'?'0.82rem':sz==='large'?'1.05rem':'0.92rem';
+}
+
+// ─── Settings: Notifications tab ──────────────────────────────────────────
+function loadNotifSettings(){
+  var saved=JSON.parse(localStorage.getItem('notif_settings')||'{}');
+  document.getElementById('notif-sound').checked  =saved.sound  !==false;
+  document.getElementById('notif-preview').checked=saved.preview!==false;
+  var enabled=Notification&&Notification.permission==='granted';
+  document.getElementById('notif-enable').checked=enabled;
+  document.getElementById('notif-permission-msg').textContent=
+    !('Notification' in window)?'Notifications not supported in this browser.':
+    Notification.permission==='denied'?'Blocked by browser — allow in site settings.':
+    enabled?'Desktop notifications are on.':'Click to enable notifications.';
+}
+async function toggleNotifPermission(){
+  if(!('Notification' in window)){alert('Notifications not supported.');return;}
+  if(document.getElementById('notif-enable').checked){
+    var perm=await Notification.requestPermission();
+    document.getElementById('notif-enable').checked=perm==='granted';
+    loadNotifSettings();
+  }
+  saveNotifSettings();
+}
+function saveNotifSettings(){
+  localStorage.setItem('notif_settings',JSON.stringify({
+    sound:  document.getElementById('notif-sound').checked,
+    preview:document.getElementById('notif-preview').checked
+  }));
+}
+
+// ─── Context menu: messages ───────────────────────────────────────────────
+var ctxMsgId=null,ctxMsgEl=null,ctxFriendUsername=null;
+document.addEventListener('contextmenu',function(e){
+  var bubble=e.target.closest('.msg-bubble');
+  var friendItem=e.target.closest('.friend-item');
+  hideAllCtxMenus();
+  if(bubble){
+    e.preventDefault();
+    var wrap=bubble.closest('[data-msg-id]');
+    var isMine=bubble.classList.contains('msg-mine');
+    ctxMsgId=wrap?wrap.dataset.msgId:null;
+    ctxMsgEl=wrap;
+    var menu=document.getElementById('ctx-menu');
+    document.getElementById('ctx-delete').style.display=isMine&&ctxMsgId?'block':'none';
+    menu.style.top=Math.min(e.clientY,window.innerHeight-80)+'px';
+    menu.style.left=Math.min(e.clientX,window.innerWidth-160)+'px';
+    menu.classList.remove('hidden');
+  }else if(friendItem){
+    e.preventDefault();
+    ctxFriendUsername=friendItem.dataset.username;
+    var menu=document.getElementById('friend-ctx-menu');
+    menu.style.top=Math.min(e.clientY,window.innerHeight-80)+'px';
+    menu.style.left=Math.min(e.clientX,window.innerWidth-160)+'px';
+    menu.classList.remove('hidden');
+  }
+});
+document.addEventListener('click',function(){hideAllCtxMenus();});
+function hideAllCtxMenus(){
+  document.getElementById('ctx-menu').classList.add('hidden');
+  document.getElementById('friend-ctx-menu').classList.add('hidden');
+}
+async function ctxDeleteMsg(){
+  if(!ctxMsgId||!currentUser)return;
+  try{
+    var res=await fetch('/api/messages/'+ctxMsgId+'?username='+encodeURIComponent(currentUser.username),{method:'DELETE'});
+    if(res.ok&&ctxMsgEl){ctxMsgEl.remove();}
+    else{var d=await res.json();alert(d.error||'Delete failed.');}
+  }catch(ex){alert('Error: '+ex.message);}
+}
+function ctxReactMsg(){
+  if(!ctxMsgId)return;
+  var picker=document.getElementById('reaction-picker');
+  picker.classList.remove('hidden');
+  currentReactMsgId=ctxMsgId;
+}
+async function ctxBlockFriend(){
+  if(!ctxFriendUsername||!currentUser)return;
+  if(!confirm('Block and remove '+ctxFriendUsername+'?'))return;
+  await fetch('/api/users/'+currentUser.username+'/blocked',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUsername:ctxFriendUsername})});
+  await fetch('/api/users/'+currentUser.username+'/friends/'+ctxFriendUsername,{method:'DELETE'});
+  loadFriends();
+}
+async function ctxRemoveFriend(){
+  if(!ctxFriendUsername||!currentUser)return;
+  if(!confirm('Remove '+ctxFriendUsername+' from friends?'))return;
+  await fetch('/api/users/'+currentUser.username+'/friends/'+ctxFriendUsername,{method:'DELETE'});
+  loadFriends();
+}
+
+// ─── Profile panel ────────────────────────────────────────────────────────
+function showProfile(){
+  var u=currentUser;
+  if(!u)return;
+  var big=document.getElementById('profile-avatar-big');
+  big.textContent=(u.fname?u.fname[0]:'?').toUpperCase();
+  big.style.background=avatarColor(u.username);
+  document.getElementById('profile-full-name').textContent=(u.fname||'')+' '+(u.lname||'');
+  document.getElementById('profile-username-lbl').textContent='@'+u.username;
+  document.getElementById('profile-msg').textContent='';
+  // Load current profile from server
+  fetch('/api/users/'+u.username+'/profile').then(function(r){return r.json();}).then(function(p){
+    if(p.status)document.getElementById('profile-status').value=p.status;
+    if(p.bio)document.getElementById('profile-bio').value=p.bio;
+  }).catch(function(){});
+  document.getElementById('profile-modal').classList.remove('hidden');
+}
+async function saveProfile(){
+  var status=document.getElementById('profile-status').value;
+  var bio=document.getElementById('profile-bio').value;
+  var msg=document.getElementById('profile-msg');
+  try{
+    var res=await fetch('/api/users/'+currentUser.username+'/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status,bio:bio})});
+    if(res.ok){msg.style.color='#22c55e';msg.textContent='Profile saved!';}
+    else{var d=await res.json();msg.style.color='#ef4444';msg.textContent=d.error||'Failed.';}
+  }catch(ex){msg.style.color='#ef4444';msg.textContent='Error: '+ex.message;}
+}
+function hideProfile(){document.getElementById('profile-modal').classList.add('hidden');}
+
+// ─── GIF picker ───────────────────────────────────────────────────────────
+var TENOR_KEY='LIVDSRZULELA';
+var gifDebounce=null;
+function showGifPicker(){
+  document.getElementById('gif-search-input').value='';
+  document.getElementById('gif-grid').innerHTML='';
+  document.getElementById('gif-status').textContent='Loading trending GIFs…';
+  document.getElementById('gif-modal').classList.remove('hidden');
+  doFetchGifs('');
+}
+function hideGifPicker(){document.getElementById('gif-modal').classList.add('hidden');}
+function fetchGifs(q){
+  clearTimeout(gifDebounce);
+  gifDebounce=setTimeout(function(){doFetchGifs(q);},400);
+}
+async function doFetchGifs(query){
+  var grid=document.getElementById('gif-grid');
+  var status=document.getElementById('gif-status');
+  grid.innerHTML='';
+  status.textContent='Loading…';
+  try{
+    var url=query.trim()
+      ?'https://tenor.googleapis.com/v2/search?q='+encodeURIComponent(query)+'&key='+TENOR_KEY+'&limit=24&media_filter=tinygif,gif'
+      :'https://tenor.googleapis.com/v2/featured?key='+TENOR_KEY+'&limit=24&media_filter=tinygif,gif';
+    var res=await fetch(url);
+    var data=await res.json();
+    status.textContent='';
+    if(!data.results||data.results.length===0){status.textContent='No GIFs found.';return;}
+    data.results.forEach(function(r){
+      var thumb=r.media_formats&&r.media_formats.tinygif?r.media_formats.tinygif.url:'';
+      var full=r.media_formats&&r.media_formats.gif?r.media_formats.gif.url:thumb;
+      if(!full)return;
+      var img=document.createElement('img');
+      img.src=thumb||full;
+      img.style.cssText='width:120px;height:80px;object-fit:cover;border-radius:6px;cursor:pointer';
+      img.onclick=function(){hideGifPicker();sendRawContent(full);};
+      grid.appendChild(img);
+    });
+  }catch(ex){status.textContent='Failed: '+ex.message;}
+}
+
+// ─── Microphone recording ─────────────────────────────────────────────────
+var mediaRecorder=null,audioChunks=[];
+function toggleMicRecord(){
+  if(chatMode===''){alert('Select a conversation first.');return;}
+  if(mediaRecorder&&mediaRecorder.state==='recording'){
+    mediaRecorder.stop();
+    return;
+  }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    alert('Microphone not supported in this browser.');return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    var mimeType=MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':'audio/ogg';
+    mediaRecorder=new MediaRecorder(stream,{mimeType:mimeType});
+    audioChunks=[];
+    mediaRecorder.ondataavailable=function(e){if(e.data&&e.data.size>0)audioChunks.push(e.data);};
+    mediaRecorder.onstop=function(){
+      var blob=new Blob(audioChunks,{type:mimeType});
+      var reader=new FileReader();
+      reader.onloadend=function(){sendRawContent(reader.result);};
+      reader.readAsDataURL(blob);
+      stream.getTracks().forEach(function(t){t.stop();});
+      var btn=document.getElementById('mic-btn');
+      btn.textContent='🎤';btn.classList.remove('btn-recording');
+    };
+    mediaRecorder.start();
+    var btn=document.getElementById('mic-btn');
+    btn.textContent='⏹';btn.classList.add('btn-recording');
+  }).catch(function(err){alert('Microphone access denied. Please allow microphone in browser settings.\n'+err.message);});
+}
+
+// ─── Location sharing ─────────────────────────────────────────────────────
+function sendLocation(){
+  if(chatMode===''){alert('Select a conversation first.');return;}
+  if(!navigator.geolocation){alert('Geolocation is not supported by this browser.');return;}
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var lat=pos.coords.latitude.toFixed(5);
+    var lon=pos.coords.longitude.toFixed(5);
+    var content='📍 My location ('+lat+', '+lon+') — https://maps.google.com/?q='+lat+','+lon;
+    sendRawContent(content);
+  },function(err){
+    alert('Location access denied. Please allow location in browser settings.\n'+err.message);
+  },{timeout:10000});
+}
+
+// ─── Helper: send arbitrary content without clearing text input ───────────
+function sendRawContent(content){
+  if(!content||!stompClient)return;
+  var msg={sender:currentUser.username,timestamp:new Date().toISOString()};
+  if(chatMode.startsWith('private:')){
+    var target=chatMode.split(':')[1];
+    msg.type='PRIVATE_MESSAGE';msg.receiver=target;msg.content=content;
+    displayMessage(msg);
+    stompClient.send('/app/chat.sendPrivate',{},JSON.stringify(msg));
+    updateLastMsg(chatMode,content.startsWith('data:audio/')? '🎤 Voice message' : content.substring(0,30));
+  }else if(chatMode.startsWith('room:')){
+    var parts=chatMode.split(':');
+    msg.type='ROOM_MESSAGE';msg.roomId=parts[1];msg.receiver=null;msg.content=content;
+    displayMessage(msg);
+    stompClient.send('/app/chat.sendRoom',{},JSON.stringify(msg));
+    updateLastMsg(chatMode,content.startsWith('data:audio/')? '🎤 Voice message' : content.substring(0,30));
+  }
+}
+
 connect();
 </script>
 </body>

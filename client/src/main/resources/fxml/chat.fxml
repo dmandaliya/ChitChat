@@ -91,6 +91,9 @@
       <Button fx:id="attachImageButton" text="📎" onAction="#handleSendImage" styleClass="btn-attach" minWidth="36" minHeight="36"/>
       <Button fx:id="gifButton" text="GIF" onAction="#handleSendGif" styleClass="btn-gif" minWidth="36" minHeight="36"/>
       <Button fx:id="micButton" text="🎤" onAction="#handleVoiceRecord" styleClass="btn-attach" minWidth="36" minHeight="36"/>
+      <Button fx:id="locationButton" text="📍" onAction="#handleSendLocation" styleClass="btn-attach" minWidth="36" minHeight="36">
+        <tooltip><Tooltip text="Share Location"/></tooltip>
+      </Button>
       <TextField fx:id="messageInput" promptText="Type a message…"
                  styleClass="msg-input" HBox.hgrow="ALWAYS"
                  onAction="#handleSend"/>

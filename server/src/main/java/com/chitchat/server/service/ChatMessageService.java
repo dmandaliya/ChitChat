@@ -64,4 +64,13 @@ public class ChatMessageService {
     public List<ChatMessage> getRoomHistory(String roomId) {
         return repo.findTop50ByRoomIdOrderByTimestampAsc(roomId);
     }
+
+    public void deleteMessage(String id, String requestingUser) {
+        ChatMessage msg = repo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Message not found"));
+        if (!msg.getSender().equals(requestingUser)) {
+            throw new IllegalArgumentException("You can only delete your own messages");
+        }
+        repo.deleteById(id);
+    }
 }
