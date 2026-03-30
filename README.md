@@ -4,6 +4,8 @@ A real-time cross-platform messaging application built with Spring Boot, JavaFX,
 
 **Live App:** https://chitchat-dwhqarhneuf7grb8.canadacentral-01.azurewebsites.net
 
+**Download Executable:** https://github.com/dmandaliya/ChitChat/releases/tag/v1.0.0
+
 **Course:** COMP.2800 Software Development — University of Windsor, 2026W
 
 ---
