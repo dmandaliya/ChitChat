@@ -45,7 +45,7 @@ ChitChat consists of three deployable components:
 ## 3. Cloning the Repository
 
 ```bash
-git clone https://github.com/<your-org>/ChitChat.git
+git clone https://github.com/dmandaliya/ChitChat.git
 cd ChitChat
 ```
 
@@ -193,9 +193,9 @@ The web frontend (login page) should be returned.
 
 ### 7.1 Default Configuration (Cloud Backend)
 
-By default, the desktop client connects to the production DigitalOcean backend:
+By default, the desktop client connects to the production Azure backend:
 ```
-https://chitchat-pidj7.ondigitalocean.app
+https://chitchat-dwhqarhneuf7grb8.canadacentral-01.azurewebsites.net
 ```
 
 No additional configuration is required to use the cloud backend.
@@ -242,7 +242,7 @@ http://localhost:8080/
 
 Or for the production deployment:
 ```
-https://chitchat-pidj7.ondigitalocean.app/
+https://chitchat-dwhqarhneuf7grb8.canadacentral-01.azurewebsites.net/
 ```
 
 No installation is needed for the web client — it runs entirely in the browser.
@@ -271,7 +271,7 @@ sudo systemctl enable mysql
 ### Step 2 — Clone the Repository
 
 ```bash
-git clone https://github.com/<org>/ChitChat.git
+git clone https://github.com/dmandaliya/ChitChat.git
 cd ChitChat
 ```
 
@@ -309,20 +309,21 @@ mvn javafx:run
 
 ---
 
-## 10. Production Deployment (DigitalOcean)
+## 10. Production Deployment (Microsoft Azure)
 
-The production backend is deployed to DigitalOcean App Platform:
+The production backend is deployed to Microsoft Azure App Service:
 
 | Setting | Value |
 |---|---|
-| Platform | DigitalOcean App Platform |
-| Backend URL | https://chitchat-pidj7.ondigitalocean.app |
-| Database | DigitalOcean managed PostgreSQL |
-| Build command | `mvn clean install -DskipTests` |
-| Run command | `java -jar server/target/server-1.0-SNAPSHOT.jar` |
-| Port | 8080 (mapped to HTTPS by DigitalOcean) |
+| Platform | Azure App Service (Free tier, Canada Central) |
+| Backend URL | https://chitchat-dwhqarhneuf7grb8.canadacentral-01.azurewebsites.net |
+| Database | Azure Database for PostgreSQL Flexible Server (`chitchat-db.postgres.database.azure.com`) |
+| Build & Deploy | GitHub Actions (`.github/workflows/main_chitchat.yml`) — auto-deploys on push to `main` |
+| Build command | `mvn -N install -DskipTests && mvn -pl shared,server package -DskipTests` |
+| Port | 8080 (mapped to HTTPS by Azure) |
+| Spring profile | `SPRING_PROFILES_ACTIVE=prod` (uses `application-prod.properties`) |
 
-Spring Boot auto-detects PostgreSQL when the `DATABASE_URL` environment variable is set by the DigitalOcean platform.
+Connection is configured via Azure App Service environment variables: `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`.
 
 ---
 
