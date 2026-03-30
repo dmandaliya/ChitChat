@@ -72,6 +72,24 @@ chitchat/
 
 ---
 
+## Database
+
+**Schema:** [docs/schema.sql](docs/schema.sql)
+
+The schema is auto-created by Hibernate on first run. To connect manually:
+
+```
+Host:     localhost
+Port:     3306
+Database: chitchat
+Username: root
+Password: (none)
+```
+
+**Production (Azure):** `chitchat-db.postgres.database.azure.com` — credentials managed via Azure App Service environment variables.
+
+---
+
 ## Documentation
 
 | Document | File |
@@ -80,6 +98,7 @@ chitchat/
 | Design Document | [docs/design_document.md](docs/design_document.md) |
 | Deployment Document | [docs/deployment_document.md](docs/deployment_document.md) |
 | User Guide | [docs/user_guide.md](docs/user_guide.md) |
+| Database Schema | [docs/schema.sql](docs/schema.sql) |
 
 ---
 
