@@ -8,7 +8,7 @@
 
 ## Abstract
 
-ChitChat is a full-featured, cross-platform real-time messaging application developed as the group project for COMP.2800 Software Development. The system provides instant messaging, group chat rooms, a social friend graph, voice/video call signalling, and a range of personalization features. It is built on a Spring Boot backend with a MySQL/PostgreSQL database, a JavaFX desktop client, and a plain HTML/CSS/JavaScript web frontend. Communication between client and server is handled over both REST HTTP and STOMP WebSocket, enabling low-latency real-time delivery of messages, typing indicators, and read receipts. The application is deployed on DigitalOcean App Platform and is accessible at https://chitchat-pidj7.ondigitalocean.app.
+ChitChat is a full-featured, cross-platform real-time messaging application developed as the group project for COMP.2800 Software Development. The system provides instant messaging, group chat rooms, a social friend graph, voice/video call signalling, and a range of personalization features. It is built on a Spring Boot backend with a MySQL/PostgreSQL database, a JavaFX desktop client, and a plain HTML/CSS/JavaScript web frontend. Communication between client and server is handled over both REST HTTP and STOMP WebSocket, enabling low-latency real-time delivery of messages, typing indicators, and read receipts. The application is deployed on Microsoft Azure App Service and is accessible at https://chitchat-dwhqarhneuf7grb8.canadacentral-01.azurewebsites.net.
 
 ---
 
@@ -49,14 +49,14 @@ Established the basic communication foundation using raw TCP sockets. This sprin
 Migrated from raw sockets to a Spring Boot backend with STOMP WebSocket support and MySQL persistence. Introduced the JavaFX desktop client and a web frontend. Core features implemented: authentication, public chat, private messaging, friend system, and group rooms.
 
 **Sprint 3 — Feature Completion and Deployment**
-Added read receipts, typing indicators, message reactions, GIF search, voice/video call signalling, user profiles and preferences, dark mode, desktop notifications, and deployed the backend to DigitalOcean App Platform with a managed PostgreSQL database.
+Added read receipts, typing indicators, message reactions, GIF search, voice/video call signalling, user profiles and preferences, dark mode, desktop notifications, and deployed the backend to Microsoft Azure App Service with an Azure Database for PostgreSQL.
 
 ### 2.3 Tools and Workflow
 - **Version control:** Git / GitHub (`github.com/dmandaliya/ChitChat`)
 - **Build system:** Apache Maven (multi-module)
 - **IDE:** VS Code / IntelliJ IDEA
 - **Project tracking:** Group chat coordination
-- **Deployment:** DigitalOcean App Platform
+- **Deployment:** Microsoft Azure App Service (Canada Central)
 
 ---
 
@@ -68,7 +68,7 @@ ChitChat follows a three-tier client-server architecture:
 
 - **Presentation Tier:** JavaFX 21 desktop client and a browser-based HTML/CSS/JS web frontend
 - **Application Tier:** Spring Boot 3.4.3 server exposing REST endpoints and a STOMP WebSocket broker
-- **Data Tier:** MySQL 9.6 for local development, PostgreSQL on DigitalOcean for production
+- **Data Tier:** MySQL 9.6 for local development, PostgreSQL on Azure for production
 
 ### 3.2 Technology Stack
 
@@ -108,8 +108,8 @@ User passwords are hashed with BCrypt before storage. Plaintext passwords are ne
 **Hibernate schema auto-creation**
 The database schema is managed by Hibernate with `ddl-auto=update`. There are no manual SQL migration files — the schema is created automatically on first server startup from the JPA entity definitions.
 
-**DigitalOcean deployment**
-The backend is deployed on DigitalOcean App Platform with a managed PostgreSQL database. The desktop client defaults to the DigitalOcean URL and can be redirected to a local server via the `CHITCHAT_SERVER_URL` environment variable.
+**Azure deployment**
+The backend is deployed on Microsoft Azure App Service (Canada Central) with an Azure Database for PostgreSQL Flexible Server. Deployment is automated via GitHub Actions on every push to `main`. The desktop client defaults to the Azure URL and can be redirected to a local server via the `CHITCHAT_SERVER_URL` environment variable.
 
 ### 3.5 Database Schema
 
@@ -133,14 +133,14 @@ The following tables are automatically created by Hibernate:
 ### 4.1 Findings
 
 **What worked well:**
-- The STOMP WebSocket layer proved reliable for real-time delivery. Message latency was consistently under 200 ms on local network and under 500 ms on the DigitalOcean deployment.
+- The STOMP WebSocket layer proved reliable for real-time delivery. Message latency was consistently under 200 ms on local network and under 500 ms on the Azure deployment.
 - Spring Boot's auto-configuration significantly reduced boilerplate. Hibernate's `ddl-auto=update` made schema management seamless across development and deployment environments.
 - The shared Maven module pattern worked well for keeping the `Message` DTO in sync between client and server without duplication.
 - The JavaFX FXML + CSS approach allowed clean separation of UI layout and styling, and the CSS class-based theming (dark mode, bubble colors, font sizes) was straightforward to implement.
 
 **Challenges encountered:**
 - The Java Platform Module System (JPMS) added complexity to the JavaFX client build, requiring careful `module-info.java` configuration and `--add-opens` flags in some cases.
-- The SCS VM was unavailable within the submission timeframe. The DigitalOcean deployment was used as an alternative, which the professor acknowledged as acceptable given the circumstances.
+- The application is deployed on Microsoft Azure App Service (Canada Central), which the professor acknowledged as acceptable in place of the SCS VM.
 - WebRTC call signalling works fully in the browser. The desktop client (JavaFX) handles the signalling messages but does not render live video, as JavaFX has no native WebRTC support.
 - Message deduplication required client-side handling (800 ms window) because the server's dual-send pattern for private messages (user queue + topic fallback) occasionally caused duplicates.
 
@@ -165,7 +165,7 @@ Given more time, the following enhancements would be prioritized:
 4. OkHttp3 Documentation — https://square.github.io/okhttp/
 5. Jackson Documentation — https://github.com/FasterXML/jackson-docs
 6. Tenor GIF API — https://developers.google.com/tenor/guides/quickstart
-7. DigitalOcean App Platform — https://docs.digitalocean.com/products/app-platform/
+7. Microsoft Azure App Service — https://learn.microsoft.com/en-us/azure/app-service/
 8. BCrypt — Niels Provos and David Mazières, "A Future-Adaptable Password Scheme", USENIX 1999
 
 ---
